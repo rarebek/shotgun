@@ -25,7 +25,7 @@ import (
 )
 
 const maxOutputSizeBytes = 50_000_000  // 50mb
-const maxFileReadSizeBytes = 2_000_000 // 2mb
+const maxFileReadSizeBytes = 500_000_000 // 500mb
 var ErrContextTooLong = errors.New("context is too long")
 
 // directories that should never appear in the generated context tree

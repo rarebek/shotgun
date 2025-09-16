@@ -203,7 +203,7 @@ wails build     # build production executable
 
 ### file processing
 - maximum output size: 50mb for context generation
-- maximum file read size: 2mb per file
+- maximum file read size: 500mb per file
 - binary files are detected and excluded from context
 - supports custom ignore patterns beyond standard .gitignore
 
