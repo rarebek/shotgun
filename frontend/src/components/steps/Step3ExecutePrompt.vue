@@ -32,9 +32,9 @@
             >
             <span
                 v-else-if="tokenCountError"
-                class="text-sm text-red-500 ml-2"
+                class="text-sm font-bold px-2 py-1 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 ml-2 max-w-[300px] truncate"
                 :title="tokenCountError"
-                >error</span
+                >{{ tokenCountError }}</span
             >
             <span
                 v-else

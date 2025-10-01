@@ -130,10 +130,10 @@
                         </span>
                         <span
                             v-else-if="tokenCountError"
-                            class="text-sm text-red-500"
+                            class="text-sm font-bold px-2 py-1 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 max-w-[300px] truncate"
                             :title="tokenCountError"
                         >
-                            error
+                            {{ tokenCountError }}
                         </span>
                         <span
                             v-else
