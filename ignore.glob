@@ -58,12 +58,12 @@ cache/
 *.bz2
 *.lock
 *-lock.json
+pnpm-lock.yaml
 
 *.sqlite
 *.sqlite3
 *.db
 *.mdb
-*.sql
 *.dump
 
 *.exe

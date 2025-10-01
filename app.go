@@ -3,10 +3,13 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -178,7 +181,7 @@ func (a *App) SelectDirectory() (string, error) {
 // listfiles lists files and folders in a directory, parsing .gitignore if present
 func (a *App) ListFiles(dirPath string) ([]*FileNode, error) {
 	runtime.LogDebugf(a.ctx, "listfiles called for directory: %s", dirPath)
-	runtime.LogDebugf(a.ctx, "listfiles: useCustomIgnore=%v, customPatternsLoaded=%v", 
+	runtime.LogDebugf(a.ctx, "listfiles: useCustomIgnore=%v, customPatternsLoaded=%v",
 		a.useCustomIgnore, a.currentCustomIgnorePatterns != nil)
 
 	a.projectGitignore = nil        // reset for the new directory
@@ -423,7 +426,7 @@ func (a *App) countProcessableItems(jobCtx context.Context, rootDir string, excl
 			if entry.IsDir() && alwaysExcludedDirs[entry.Name()] {
 				continue
 			}
-			
+
 			path := filepath.Join(currentPath, entry.Name())
 			relPath, _ := filepath.Rel(rootDir, path)
 
@@ -545,7 +548,7 @@ func (a *App) generateShotgunOutputWithProgress(jobCtx context.Context, rootDir 
 			if entry.IsDir() && alwaysExcludedDirs[entry.Name()] {
 				continue
 			}
-			
+
 			select {
 			case <-pCtx.Done():
 				return pCtx.Err()
@@ -566,7 +569,7 @@ func (a *App) generateShotgunOutputWithProgress(jobCtx context.Context, rootDir 
 
 			// determine if this item is excluded (by parent or by itself)
 			isExcluded := parentExcluded || excludedMap[relPath]
-			
+
 			// mark excluded files in the tree
 			markerSuffix := ""
 			if isExcluded {
@@ -1014,20 +1017,20 @@ func (a *App) compileCustomIgnorePatterns() error {
 	}
 
 	runtime.LogInfof(a.ctx, "compiling %d lines with %d non-comment patterns", len(validLines), patternCount)
-	
+
 	ign := gitignore.CompileIgnoreLines(validLines...)
 	// поскольку compileignorelines в этой версии не возвращает ошибку,
 	// проверка на err удалена.
 	// если ign будет nil (например, если все строки были пустыми или комментариями,
 	// и библиотека так обрабатывает), то это будет корректно обработано ниже.
 	a.currentCustomIgnorePatterns = ign
-	
+
 	if ign != nil {
 		runtime.LogInfof(a.ctx, "successfully compiled custom ignore patterns (%d active patterns)", patternCount)
 	} else {
 		runtime.LogWarning(a.ctx, "compiled patterns resulted in nil - all patterns may be comments or invalid")
 	}
-	
+
 	return nil
 }
 
@@ -1066,7 +1069,7 @@ func (a *App) loadSettings() {
 			// to avoid infinite appending
 			baseRules := defaultCustomIgnoreRulesContent
 			userRules := loadedSettings.CustomIgnoreRules
-			
+
 			// if user rules already contain the base rules marker, use them as-is
 			// otherwise, combine base rules with user rules
 			if strings.Contains(userRules, "#--- user rules ---") {
@@ -1104,7 +1107,7 @@ func (a *App) saveSettings() error {
 		GeminiAPIKey:      a.settings.GeminiAPIKey,
 		CustomIgnoreRules: a.settings.CustomIgnoreRules, // default to full rules
 	}
-	
+
 	// extract only user rules for saving (everything after "#--- user rules ---")
 	if strings.Contains(a.settings.CustomIgnoreRules, "#--- user rules ---") {
 		parts := strings.Split(a.settings.CustomIgnoreRules, "#--- user rules ---")
@@ -1145,10 +1148,10 @@ func (a *App) GetCustomIgnoreRules() string {
 // setcustomignorerules updates the custom ignore rules, saves them, and recompiles.
 func (a *App) SetCustomIgnoreRules(rules string) error {
 	runtime.LogInfof(a.ctx, "setcustomignorerules: updating rules (length: %d)", len(rules))
-	
+
 	// keep the full rules in memory for immediate use
 	a.settings.CustomIgnoreRules = rules
-	
+
 	// compile the patterns first - this must succeed before we proceed
 	compileErr := a.compileCustomIgnorePatterns()
 	if compileErr != nil {
@@ -1156,7 +1159,7 @@ func (a *App) SetCustomIgnoreRules(rules string) error {
 		// restore previous patterns if compilation fails
 		return fmt.Errorf("failed to compile custom ignore patterns: %w", compileErr)
 	}
-	
+
 	// save the settings after successful compilation
 	saveErr := a.saveSettings()
 	if saveErr != nil {
@@ -1164,11 +1167,11 @@ func (a *App) SetCustomIgnoreRules(rules string) error {
 		// patterns are compiled but not saved - they'll work until app restart
 		// continue with refresh despite save error
 	}
-	
+
 	// log the current state
-	runtime.LogInfof(a.ctx, "custom ignore patterns compiled successfully, currentCustomIgnorePatterns is now %v", 
+	runtime.LogInfof(a.ctx, "custom ignore patterns compiled successfully, currentCustomIgnorePatterns is now %v",
 		a.currentCustomIgnorePatterns != nil)
-	
+
 	// refresh the file watcher if active - this will trigger a file tree reload
 	if a.fileWatcher != nil && a.fileWatcher.rootDir != "" {
 		runtime.LogInfo(a.ctx, "refreshing file watcher with new ignore patterns")
@@ -1178,11 +1181,11 @@ func (a *App) SetCustomIgnoreRules(rules string) error {
 		}
 		// even if refresh fails, patterns are updated and will be used by ListFiles
 	}
-	
+
 	if saveErr != nil {
 		return fmt.Errorf("patterns updated but failed to save settings: %w", saveErr)
 	}
-	
+
 	runtime.LogInfo(a.ctx, "custom ignore rules successfully updated and applied")
 	return nil
 }
@@ -1228,9 +1231,9 @@ func (a *App) SetUseCustomIgnore(enabled bool) error {
 	return nil
 }
 
-// getgeminiapikey returns the saved Gemini API key.
+// getgeminiapikey returns the saved Gemini API key, with fallback to environment variables.
 func (a *App) GetGeminiAPIKey() string {
-	return a.settings.GeminiAPIKey
+	return a.getAPIKey()
 }
 
 // setgeminiapikey saves the Gemini API key.
@@ -1253,6 +1256,28 @@ func (a *App) getAPIKey() string {
 	return os.Getenv("GOOGLE_API_KEY")
 }
 
+// createHTTPClientWithTimeouts creates an http client with proper timeout configurations
+func createHTTPClientWithTimeouts() *http.Client {
+	return &http.Client{
+		Timeout: 90 * time.Second,
+		Transport: &http.Transport{
+			DialContext: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
+			TLSHandshakeTimeout:   30 * time.Second,
+			ResponseHeaderTimeout: 30 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			IdleConnTimeout:       90 * time.Second,
+			MaxIdleConns:          100,
+			MaxIdleConnsPerHost:   10,
+			TLSClientConfig: &tls.Config{
+				MinVersion: tls.VersionTLS12,
+			},
+		},
+	}
+}
+
 // countgeminitokens counts the tokens in the provided text using Google's Gemini API
 func (a *App) CountGeminiTokens(text string) (int, error) {
 	apiKey := a.getAPIKey()
@@ -1260,15 +1285,27 @@ func (a *App) CountGeminiTokens(text string) (int, error) {
 		return 0, fmt.Errorf("api key not set. please set GEMINI_API_KEY or GOOGLE_API_KEY environment variable, or configure it in settings")
 	}
 
-	client, err := genai.NewClient(context.Background(), option.WithAPIKey(apiKey))
+	// log api key source for debugging
+	if a.settings.GeminiAPIKey != "" {
+		runtime.LogDebug(a.ctx, "using api key from settings")
+	} else {
+		runtime.LogDebug(a.ctx, "using api key from environment variables")
+	}
+
+	// create context with timeout to prevent hanging on slow networks
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	// note: we don't use custom http client here as it can interfere with api key authentication
+	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
 	if err != nil {
 		return 0, fmt.Errorf("failed to create genai client: %w", err)
 	}
 	defer client.Close()
 
-	model := client.GenerativeModel("gemini-1.5-pro-latest")
+	model := client.GenerativeModel("gemini-2.5-pro")
 
-	resp, err := model.CountTokens(context.Background(), genai.Text(text))
+	resp, err := model.CountTokens(ctx, genai.Text(text))
 	if err != nil {
 		return 0, fmt.Errorf("token counting failed: %w", err)
 	}
@@ -1290,6 +1327,7 @@ func (a *App) ExecuteGeminiRequest(prompt string, modelName string) (string, err
 	// store the cancel function so it can be used by StopGeminiRequest
 	a.geminiRequestCancel = cancel
 
+	// note: we don't use custom http client here as it can interfere with api key authentication
 	// create gemini client
 	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
 	if err != nil {

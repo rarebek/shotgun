@@ -24,7 +24,7 @@
         <div class="flex-grow flex flex-col space-y-4 overflow-hidden">
             <!-- user query input section - positioned at top in vertical layout -->
             <div
-                class="w-full h-48 flex flex-col space-y-2 overflow-y-hidden px-2 py-2 border border-accent rounded-md bg-white dark:bg-dark-surface"
+                class="w-full h-96 flex flex-col space-y-2 overflow-y-hidden px-2 py-2 border border-accent rounded-md bg-white dark:bg-dark-surface"
             >
                 <div class="flex flex-col flex-grow-[3]">
                     <!-- <label
@@ -36,7 +36,7 @@
                         id="user-task-ai"
                         v-model="localUserTask"
                         spellcheck="false"
-                        class="w-full p-2 border border-accent rounded-md shadow-sm focus:ring-light-accent dark:focus:ring-dark-accent focus:border-light-accent dark:focus:border-dark-accent text-sm bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100 flex-grow resize-none"
+                        class="w-full p-2 border border-accent rounded-md shadow-sm focus:ring-light-accent dark:focus:ring-dark-accent focus:border-light-accent dark:focus:border-dark-accent text-lg bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100 flex-grow resize-none"
                         placeholder="describe what the ai should do..."
                     ></textarea>
                 </div>
