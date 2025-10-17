@@ -6,93 +6,8 @@
             <p class="text-sm text-gray-600 dark:text-gray-300">this tool will split the diff into smaller parts to make it easier to apply.</p>
         </div>
 
-        <!-- box 2: textarea with copy/clear buttons -->
+        <!-- box 2: textarea without buttons -->
         <div class="flex-grow flex flex-col overflow-hidden px-2 py-2 border-2 border-accent rounded-[0.4rem] bg-white dark:bg-[#3a3b60]">
-            <BaseButton
-                v-if="localShotgunGitDiffInput.trim()"
-                @click="copyDiffToClipboard"
-                class="text-xs px-2 py-1"
-                :class="{ 'bg-green-600 dark:bg-green-700': copySuccess }"
-            >
-                <template #icon>
-                    <svg
-                        v-if="!copySuccess"
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
-                        />
-                    </svg>
-                    <svg
-                        v-else
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M5 13l4 4L19 7"
-                        />
-                    </svg>
-                </template>
-                <span class="text-base">{{
-                    copySuccess ? "copied!" : "copy"
-                }}</span>
-            </BaseButton>
-            <BaseButton
-                v-if="localShotgunGitDiffInput.trim()"
-                @click="clearTextarea"
-                class="text-xs px-2 py-1"
-                variant="danger"
-                :class="{ 'bg-red-600 dark:bg-red-700': clearSuccess }"
-            >
-                <template #icon>
-                    <svg
-                        v-if="!clearSuccess"
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                    </svg>
-                    <svg
-                        v-else
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M5 13l4 4L19 7"
-                        />
-                    </svg>
-                </template>
-                <span class="text-base">{{
-                    clearSuccess ? "cleared!" : "clear"
-                }}</span>
-            </BaseButton>
             <textarea
                 id="shotgun-git-diff-input"
                 v-model="localShotgunGitDiffInput"
@@ -167,12 +82,6 @@ const props = defineProps({
         default: "",
     },
 });
-
-// copy functionality state
-const copySuccess = ref(false);
-
-// clear functionality state
-const clearSuccess = ref(false);
 
 const localShotgunGitDiffInput = ref(props.initialGitDiff);
 
@@ -305,37 +214,5 @@ function handleSplitDiff() {
         gitDiff: localShotgunGitDiffInput.value,
         lineLimit: localSplitLineLimit.value,
     });
-}
-
-function copyDiffToClipboard() {
-    if (localShotgunGitDiffInput.value) {
-        navigator.clipboard
-            .writeText(localShotgunGitDiffInput.value)
-            .then(() => {
-                copySuccess.value = true;
-                // reset the success state after 2 seconds
-                setTimeout(() => {
-                    copySuccess.value = false;
-                }, 2000);
-            })
-            .catch((err) => {
-                LogErrorRuntime("failed to copy to clipboard: " + err);
-            });
-    }
-}
-
-function clearTextarea() {
-    if (localShotgunGitDiffInput.value) {
-        // clear the textarea
-        localShotgunGitDiffInput.value = "";
-
-        // show success message
-        clearSuccess.value = true;
-
-        // reset the success state after 2 seconds
-        setTimeout(() => {
-            clearSuccess.value = false;
-        }, 2000);
-    }
 }
 </script>

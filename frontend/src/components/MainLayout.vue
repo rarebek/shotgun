@@ -6,7 +6,7 @@
             class="flex items-center justify-center bg-sidebar dark:bg-card text-foreground px-4 py-4"
         >
             <div
-                class="flex items-center justify-center bg-white dark:bg-card border-2 border-accent rounded-[0.4rem] px-6 py-1 flex-1 relative"
+                class="flex items-center justify-center bg-white dark:bg-[#3a3b60] border-2 border-accent rounded-[0.4rem] px-6 py-1 flex-1 relative"
             >
                 <HorizontalStepper
                     :current-step="currentStep"
@@ -64,12 +64,14 @@
                 :is-counting-tokens="isCountingTokens"
                 :token-count-error="tokenCountError"
                 :prompt-cost="promptCost"
+                :is-cost-calculation-enabled="isCostCalculationEnabled"
                 @step-action="handleStepAction"
                 @update-composed-prompt="handleComposedPromptUpdate"
                 @update:user-task="handleUserTaskUpdate"
                 @update:rules-content="handleRulesContentUpdate"
                 @update:shotgunGitDiff="handleShotgunGitDiffUpdate"
                 @update:splitLineLimit="handleSplitLineLimitUpdate"
+                @toggle-cost-calculation="handleToggleCostCalculation"
                 ref="centralPanelRef"
             />
         </div>
@@ -252,11 +254,22 @@ const geminiTokenCount = ref(0);
 const isCountingTokens = ref(false);
 const tokenCountError = ref("");
 const promptCost = ref(0);
+const isCostCalculationEnabled = ref(false); // off by default
 let tokenDebounceTimer = null;
 
 // background token counting function (runs independently of step navigation)
 async function countTokensForPromptBackground(prompt) {
     clearTimeout(tokenDebounceTimer);
+
+    // only calculate if cost calculation is enabled
+    if (!isCostCalculationEnabled.value) {
+        geminiTokenCount.value = 0;
+        promptCost.value = 0;
+        tokenCountError.value = "";
+        isCountingTokens.value = false;
+        return;
+    }
+
     if (!prompt) {
         geminiTokenCount.value = 0;
         promptCost.value = 0;
@@ -1336,18 +1349,19 @@ watch(
 ); // 'immediate: false' to avoid running on initial undefined -> '' or '' -> initial value if set by default
 
 // background token counting watcher - triggers whenever finalPrompt changes (persists across steps)
+let lastCountedPrompt = "";
 watch(
     () => finalPrompt.value,
     (newPrompt) => {
-        countTokensForPromptBackground(newPrompt);
+        // only count tokens if the prompt actually changed
+        if (newPrompt !== lastCountedPrompt) {
+            lastCountedPrompt = newPrompt;
+            countTokensForPromptBackground(newPrompt);
+        }
     },
     { immediate: false }
 );
 
-// ensure listeners are registered once at startup
-onMounted(() => {
-    registerShotgunContextListeners();
-});
 // no need to re-register on projectroot changes anymore, the listeners are global
 
 // helper function to process pending reloads
@@ -1388,6 +1402,22 @@ function handleShotgunGitDiffUpdate(val) {
 
 function handleSplitLineLimitUpdate(val) {
     splitLineLimitValue.value = val;
+}
+
+// handler for toggling cost calculation
+function handleToggleCostCalculation() {
+    isCostCalculationEnabled.value = !isCostCalculationEnabled.value;
+
+    // trigger token counting if just enabled
+    if (isCostCalculationEnabled.value && finalPrompt.value) {
+        countTokensForPromptBackground(finalPrompt.value);
+    } else if (!isCostCalculationEnabled.value) {
+        // clear values when disabled
+        geminiTokenCount.value = 0;
+        promptCost.value = 0;
+        tokenCountError.value = "";
+        isCountingTokens.value = false;
+    }
 }
 
 

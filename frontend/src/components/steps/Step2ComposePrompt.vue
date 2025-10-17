@@ -162,6 +162,19 @@
                         </span>
                     </div> -->
                     <div class="flex items-center space-x-3">
+                        <!-- cost calculation toggle button -->
+                        <BaseButton
+                            @click="emit('toggle-cost-calculation')"
+                            :class="[
+                                'px-3 py-2 text-base font-semibold rounded-[0.4rem] focus:outline-none flex items-center gap-1',
+                                props.isCostCalculationEnabled
+                                    ? 'bg-green-600 dark:bg-green-700 text-white hover:bg-green-700 dark:hover:bg-green-800'
+                                    : 'bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-400 dark:hover:bg-gray-600'
+                            ]"
+                            title="Toggle cost calculation"
+                        >
+                            <span class="text-lg font-bold">$</span>
+                        </BaseButton>
                         <BaseButton
                             @click="copyFinalPromptToClipboard"
                             :disabled="
@@ -276,20 +289,25 @@
                                         >token</span
                                     >
                                     <span
-                                        v-if="isCountingTokens"
+                                        v-if="!props.isCostCalculationEnabled"
+                                        class="text-xl font-bold text-gray-500 dark:text-gray-400"
+                                        >off</span
+                                    >
+                                    <span
+                                        v-else-if="props.isCountingTokens"
                                         class="text-xl font-bold text-gray-500 dark:text-gray-400 animate-pulse"
                                         >recounting</span
                                     >
                                     <span
-                                        v-else-if="tokenCountError"
+                                        v-else-if="props.tokenCountError"
                                         class="text-xl font-bold text-red-600 dark:text-red-400"
-                                        :title="tokenCountError"
+                                        :title="props.tokenCountError"
                                         >error</span
                                     >
                                     <span
                                         v-else
                                         class="text-xl font-bold text-gray-800 dark:text-gray-200"
-                                        >{{ geminiTokenCount.toLocaleString() }}</span
+                                        >{{ props.geminiTokenCount.toLocaleString() }}</span
                                     >
                                 </div>
                                 <div class="hidden lg:block h-6 w-px bg-accent"></div>
@@ -299,20 +317,25 @@
                                         >cost</span
                                     >
                                     <span
-                                        v-if="isCountingTokens"
+                                        v-if="!props.isCostCalculationEnabled"
+                                        class="text-xl font-bold text-gray-500 dark:text-gray-400"
+                                        >off</span
+                                    >
+                                    <span
+                                        v-else-if="props.isCountingTokens"
                                         class="text-xl font-bold text-gray-500 dark:text-gray-400 animate-pulse"
                                         >recounting</span
                                     >
                                     <span
-                                        v-else-if="tokenCountError"
+                                        v-else-if="props.tokenCountError"
                                         class="text-xl font-bold text-red-600 dark:text-red-400"
-                                        :title="tokenCountError"
+                                        :title="props.tokenCountError"
                                         >error</span
                                     >
                                     <span
                                         v-else
                                         class="text-xl font-bold text-gray-800 dark:text-gray-200"
-                                        >{{ promptCost.toFixed(4) }} $</span
+                                        >{{ props.promptCost.toFixed(4) }} $</span
                                     >
                                 </div>
                             </div>
@@ -379,12 +402,17 @@ const props = defineProps({
         type: Number,
         default: 0,
     },
+    isCostCalculationEnabled: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 const emit = defineEmits([
     "update:finalPrompt",
     "update:userTask",
     "update:rulesContent",
+    "toggle-cost-calculation",
 ]);
 
 const promptTemplates = {
@@ -510,7 +538,7 @@ const charCount = computed(() => {
 });
 
 const charCountColorClass = computed(() => {
-    const count = geminiTokenCount.value;
+    const count = props.geminiTokenCount;
     if (count < 1000000) {
         return "text-green-600";
     } else if (count <= 4000000) {
@@ -521,10 +549,10 @@ const charCountColorClass = computed(() => {
 });
 
 const tooltipText = computed(() => {
-    if (isCountingTokens.value) return "calculating tokens...";
-    if (tokenCountError.value) return `error: ${tokenCountError.value}`;
+    if (props.isCountingTokens) return "calculating tokens...";
+    if (props.tokenCountError) return `error: ${props.tokenCountError}`;
 
-    return `prompt contains ${geminiTokenCount.value.toLocaleString()} gemini tokens`;
+    return `prompt contains ${props.geminiTokenCount.toLocaleString()} gemini tokens`;
 });
 
 const DEFAULT_RULES = `no additional rules`;
@@ -566,11 +594,8 @@ onMounted(async () => {
         isFirstMount.value = false;
     }
 
-    // automatically generate prompt on mount if we have context
-    // generate even without userTask to show the prompt immediately
-    if (props.fileListContext) {
-        debouncedUpdateFinalPrompt();
-    }
+    // skip automatic generation on mount to prevent initial lag
+    // the prompt will be generated when user starts typing or changes template
 });
 
 async function updateFinalPrompt(forceUpdate = false) {
@@ -614,8 +639,7 @@ async function updateFinalPrompt(forceUpdate = false) {
     // only update if the prompt has actually changed
     if (populatedPrompt !== props.finalPrompt) {
         emit("update:finalPrompt", populatedPrompt);
-        // defer token counting to avoid blocking ui
-        setTimeout(() => countTokensForPrompt(populatedPrompt), 100);
+        // token counting now handled by mainlayout's background watcher
     }
 
     isLoadingFinalPrompt.value = false;
@@ -664,7 +688,7 @@ watch(localUserTask, (currentValue) => {
             emit("update:userTask", currentValue);
             debouncedUpdateFinalPrompt(); // trigger auto-update
         }
-    }, 300);
+    }, 800); // increased from 300ms to reduce update frequency
 });
 
 // watch for file list context changes and auto-regenerate

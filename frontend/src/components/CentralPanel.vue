@@ -25,6 +25,8 @@
             :is-counting-tokens="props.isCountingTokens"
             :token-count-error="props.tokenCountError"
             :prompt-cost="props.promptCost"
+            :is-cost-calculation-enabled="props.isCostCalculationEnabled"
+            @toggle-cost-calculation="() => emit('toggle-cost-calculation')"
         />
         <Step3ExecutePrompt
             v-if="currentStep === 3"
@@ -76,6 +78,7 @@ const props = defineProps({
     isCountingTokens: { type: Boolean, default: false },
     tokenCountError: { type: String, default: "" },
     promptCost: { type: Number, default: 0 },
+    isCostCalculationEnabled: { type: Boolean, default: false },
 });
 
 const initialGitDiff = computed(() => {
@@ -95,6 +98,7 @@ const emit = defineEmits([
     "update:rulesContent",
     "update:shotgunGitDiff",
     "update:splitLineLimit",
+    "toggle-cost-calculation",
 ]);
 
 const step2Ref = ref(null);

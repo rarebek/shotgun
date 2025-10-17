@@ -1,8 +1,12 @@
 <template>
-    <div class="p-6 flex flex-col h-full">
-        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
-            step 4: apply patch
-        </h2>
+    <div class="p-4 h-full flex flex-col space-y-4">
+        <!-- box 1: title and description -->
+        <div class="px-2 py-2 border-2 border-accent rounded-[0.4rem] bg-white dark:bg-[#3a3b60]">
+            <h1 class="text-2xl text-gray-900 dark:text-gray-100">apply patch</h1>
+            <p class="text-sm text-gray-600 dark:text-gray-300">
+                the original diff has been split into smaller diffs. copy each part and apply it using your preferred tool. with an llm, just tell it to apply the diff.
+            </p>
+        </div>
 
         <div
             v-if="isLoading"
@@ -15,39 +19,51 @@
 
         <div
             v-else-if="splitDiffs && splitDiffs.length > 0"
-            class="flex-grow overflow-y-auto space-y-6"
+            class="flex-grow overflow-y-auto space-y-2"
         >
-            <p class="text-gray-600 dark:text-gray-300 mb-2 text-sm">
-                the original diff has been split into
-                {{ splitDiffs.length }} smaller diffs. copy each part and apply
-                it using your preferred tool. with an llm, just tell it to
-                <strong>apply the diff</strong>.
-            </p>
             <div
                 v-for="(diff, index) in splitDiffs"
                 :key="index"
                 :class="[
-                    'border border-accent rounded-md p-4',
+                    'border-2 border-accent rounded-[0.4rem] px-2 pt-2 pb-[0.1rem]',
                     isCopied[index]
                         ? 'bg-green-50 dark:bg-green-900 dark:bg-opacity-20'
-                        : 'bg-gray-50 dark:bg-dark-surface',
-                    'shadow-sm',
+                        : 'bg-white dark:bg-[#3a3b60]',
                 ]"
             >
                 <div class="flex justify-between items-center">
                     <h3
-                        class="text-lg font-medium text-gray-700 dark:text-gray-300"
+                        class="text-xl font-medium text-gray-700 dark:text-gray-300"
                     >
                         split {{ index + 1 }} of {{ splitDiffs.length }}
                     </h3>
                     <div class="flex items-center space-x-2">
-                        <!-- soon: add a feature to apply the diff automatically -->
-                        <!-- <button
-                          class="px-3 py-1 bg-gray-100 text-gray-300 text-sm font-semibold rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300"
-                          disabled
+                        <!-- pills -->
+                        <span
+                            class="inline-block px-2 py-1 border border-accent rounded-[0.4rem] text-sm font-medium"
+                            :class="getLineMetricClass(diff.split('\n').length)"
                         >
-                          apply diff
-                        </button> -->
+                            {{ diff.split("\n").length }} lines
+                        </span>
+                        <span
+                            class="inline-block px-2 py-1 border border-accent rounded-[0.4rem] bg-blue-50 dark:bg-blue-900 dark:bg-opacity-30 text-gray-900 dark:text-gray-200 text-sm font-medium"
+                        >
+                            {{ (diff.match(/^diff --git/gm) || []).length }} file{{
+                                (diff.match(/^diff --git/gm) || []).length === 1
+                                    ? ""
+                                    : "s"
+                            }}
+                        </span>
+                        <span
+                            class="inline-block px-2 py-1 border border-accent rounded-[0.4rem] bg-purple-50 dark:bg-purple-900 dark:bg-opacity-30 text-gray-900 dark:text-gray-200 text-sm font-medium"
+                        >
+                            {{ (diff.match(/^@@ .* @@/gm) || []).length }} hunk{{
+                                (diff.match(/^@@ .* @@/gm) || []).length === 1
+                                    ? ""
+                                    : "s"
+                            }}
+                        </span>
+                        <!-- copy button -->
                         <BaseButton
                             @click="copyDiffToClipboard(diff, index)"
                             class="text-xs px-2 py-1"
@@ -88,47 +104,18 @@
                         </BaseButton>
                     </div>
                 </div>
-                <div class="text-gray-600 dark:text-gray-300 text-sm mb-2">
-                    <!-- the lines metric will be orange if it's greater than props.splitlinelimit + 5%, red if it's greater than props.splitlinelimit + 20%, green if it's less than props.splitlinelimit + 5% -->
-                    <!-- calculate this in the vue script below, to simplify the code -->
-                    <div
-                        class="inline-block px-2 py-1 rounded-xl text-sm"
-                        :class="getLineMetricClass(diff.split('\n').length)"
-                    >
-                        {{ diff.split("\n").length }} lines
-                    </div>
-                    <div
-                        class="inline-block px-2 py-1 bg-indigo-100 dark:bg-indigo-900 dark:bg-opacity-50 text-gray-900 dark:text-gray-200 rounded-xl text-sm ml-2"
-                    >
-                        {{ (diff.match(/^diff --git/gm) || []).length }} file{{
-                            (diff.match(/^diff --git/gm) || []).length === 1
-                                ? ""
-                                : "s"
-                        }}
-                    </div>
-                    <div
-                        class="inline-block px-2 py-1 bg-indigo-100 dark:bg-indigo-900 dark:bg-opacity-50 text-gray-900 dark:text-gray-200 rounded-xl text-sm ml-2"
-                    >
-                        {{ (diff.match(/^@@ .* @@/gm) || []).length }} hunk{{
-                            (diff.match(/^@@ .* @@/gm) || []).length === 1
-                                ? ""
-                                : "s"
-                        }}
-                    </div>
-                </div>
                 <textarea
                     :value="diff"
-                    rows="10"
+                    rows="12"
                     readonly
                     spellcheck="false"
-                    class="w-full p-2 border border-accent rounded-md bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100 font-mono text-sm"
-                    style="min-height: 150px"
+                    class="w-full p-2 mt-2 border-2 border-accent rounded-[0.4rem] bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100 font-mono text-sm resize-none"
                 ></textarea>
             </div>
         </div>
 
-        <div v-else class="flex-grow flex justify-center items-center">
-            <h1 class="text-2xl text-gray-500 dark:text-gray-300">
+        <div v-else class="flex-grow flex justify-center items-center px-2 py-2 border-2 border-accent rounded-[0.4rem] bg-white dark:bg-[#3a3b60]">
+            <h1 class="text-xl text-gray-600 dark:text-gray-300">
                 no split diffs to display. go to step 3 to split a diff.
             </h1>
         </div>
@@ -176,11 +163,11 @@ function getLineMetricClass(lineCount) {
     const redThreshold = Math.min(limit * 1.3, limit + 200);
 
     if (lineCount > redThreshold) {
-        return "bg-red-100 dark:bg-red-900 dark:bg-opacity-30 text-gray-900 dark:text-gray-200";
+        return "bg-red-50 dark:bg-red-900 dark:bg-opacity-30 text-red-700 dark:text-red-200";
     } else if (lineCount > orangeThreshold) {
-        return "bg-orange-100 dark:bg-orange-900 dark:bg-opacity-30 text-gray-900 dark:text-gray-200";
+        return "bg-orange-50 dark:bg-orange-900 dark:bg-opacity-30 text-orange-700 dark:text-orange-200";
     } else {
-        return "bg-green-100 dark:bg-green-900 dark:bg-opacity-30 text-gray-900 dark:text-gray-200";
+        return "bg-green-50 dark:bg-green-900 dark:bg-opacity-30 text-green-700 dark:text-green-200";
     }
 }
 

@@ -1,5 +1,5 @@
 <template>
-    <div class="bg-white dark:bg-card top-0 z-10 relative">
+    <div class="bg-white dark:bg-[#3a3b60] top-0 z-10 relative">
         <div class="flex items-center py-3 pt-4 px-4">
             <div class="flex items-center">
                 <ol class="flex space-x-2 items-center">

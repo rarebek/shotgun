@@ -42,9 +42,9 @@
         <!-- drag-and-drop area for initial folder selection -->
         <div
             v-if="!projectRoot && !isLoadingContext"
-            class="flex-grow flex flex-col justify-center items-center border-4 border-dashed rounded-[0.4rem] p-10 cursor-pointer drag-area"
+            class="flex-grow flex flex-col justify-center items-center border-4 border-dashed rounded-[0.4rem] p-10 cursor-pointer drag-area bg-[#3a3b60]"
             :class="{
-                'border-light-accent dark:border-dark-accent bg-light-accent/5 dark:bg-dark-accent/10 animate-pulse-bg dragging':
+                'border-light-accent dark:border-dark-accent bg-light-accent/50 dark:bg-[#3a3b60] animate-pulse-bg dragging':
                     isDragging,
                 'border-accent': !isDragging,
             }"
@@ -110,7 +110,7 @@
         <!-- content area (textarea + copy button or error message or placeholder) -->
         <div
             v-else-if="projectRoot"
-            class="mt-0 flex-grow flex flex-col px-2 py-2 dark:bg-dark-surface border-2 border-accent rounded-[0.4rem]"
+            class="mt-0 flex-grow flex flex-col px-2 py-2 bg-white dark:bg-[#3a3b60] border-2 border-accent rounded-[0.4rem]"
         >
             <div
                 v-if="isErrorContext"
@@ -136,7 +136,7 @@
             </div>
             <div
                 v-else-if="generatedContext && !isErrorContext"
-                class="flex-grow flex flex-col items-center justify-center gap-6 max-w-[350px] mx-auto"
+                class="flex-grow flex flex-col items-center justify-center gap-6 max-w-[350px] mx-auto bg-white dark:bg-[#3a3b60]"
             >
                 <div
                     class="w-full px-6 py-6 border-2 border-accent rounded-[0.4rem] bg-gray-50 dark:bg-[#3a3b60] shadow-sm mx-4 lg:mx-0"
