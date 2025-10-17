@@ -3,18 +3,22 @@
         class="flex flex-col h-screen bg-background text-foreground"
     >
         <div
-            class="flex items-center justify-between bg-card border-b border-border px-4"
+            class="flex items-center justify-center bg-sidebar dark:bg-card text-foreground px-4 py-4"
         >
-            <HorizontalStepper
-                :current-step="currentStep"
-                :steps="steps"
-                @navigate="navigateToStep"
-                @reset="resetApplication"
-                :key="`hstepper-${currentStep}-${steps
-                    .map((s) => s.completed)
-                    .join('')}`"
-            />
-            <ThemeToggle />
+            <div
+                class="flex items-center justify-center bg-white dark:bg-card border-2 border-accent rounded-[0.4rem] px-6 py-1 flex-1 relative"
+            >
+                <HorizontalStepper
+                    :current-step="currentStep"
+                    :steps="steps"
+                    @navigate="navigateToStep"
+                    @reset="resetApplication"
+                    :key="`hstepper-${currentStep}-${steps
+                        .map((s) => s.completed)
+                        .join('')}`"
+                />
+                <ThemeToggle class="absolute right-4" />
+            </div>
         </div>
         <!-- group/layout: enables tailwind group variants for responsive child styling -->
         <div class="flex flex-1 overflow-hidden group/layout">
@@ -56,6 +60,10 @@
                 :split-line-limit="splitLineLimitValue"
                 :shotgun-git-diff="shotgunGitDiff"
                 :split-line-limit-value="splitLineLimitValue"
+                :gemini-token-count="geminiTokenCount"
+                :is-counting-tokens="isCountingTokens"
+                :token-count-error="tokenCountError"
+                :prompt-cost="promptCost"
                 @step-action="handleStepAction"
                 @update-composed-prompt="handleComposedPromptUpdate"
                 @update:user-task="handleUserTaskUpdate"
@@ -93,6 +101,8 @@ import {
     SplitShotgunDiff,
     ResetApplication,
     GetCustomPromptRules,
+    CountGeminiTokens,
+    CalculatePromptCost,
 } from "../../wailsjs/go/main/App";
 import { EventsOn, Environment } from "../../wailsjs/runtime/runtime";
 
@@ -174,7 +184,7 @@ const steps = ref([
     },
     {
         id: 3,
-        title: "execute prompt",
+        title: "prepare diff",
         completed: false,
         everCompleted: false,
         visited: false,
@@ -237,6 +247,69 @@ const splitLineLimitValue = ref(0); // add new state variable
 const isNavigating = ref(false); // track navigation state to prevent context generation during transitions
 let debounceTimer = null;
 
+// background token counting state (persists across step navigation)
+const geminiTokenCount = ref(0);
+const isCountingTokens = ref(false);
+const tokenCountError = ref("");
+const promptCost = ref(0);
+let tokenDebounceTimer = null;
+
+// background token counting function (runs independently of step navigation)
+async function countTokensForPromptBackground(prompt) {
+    clearTimeout(tokenDebounceTimer);
+    if (!prompt) {
+        geminiTokenCount.value = 0;
+        promptCost.value = 0;
+        tokenCountError.value = "";
+        return;
+    }
+
+    isCountingTokens.value = true;
+    tokenCountError.value = "";
+    tokenDebounceTimer = setTimeout(async () => {
+        try {
+            // use requestidlecallback if available for better performance
+            if (window.requestIdleCallback) {
+                window.requestIdleCallback(async () => {
+                    const count = await CountGeminiTokens(prompt);
+                    geminiTokenCount.value = count;
+
+                    // calculate cost for gemini-2.5-pro model
+                    try {
+                        const cost = await CalculatePromptCost(count, "gemini-2.5-pro", 0);
+                        promptCost.value = cost;
+                    } catch (costErr) {
+                        console.error("cost calculation error:", costErr);
+                        promptCost.value = 0;
+                    }
+
+                    isCountingTokens.value = false;
+                });
+            } else {
+                const count = await CountGeminiTokens(prompt);
+                geminiTokenCount.value = count;
+
+                // calculate cost for gemini-2.5-pro model
+                try {
+                    const cost = await CalculatePromptCost(count, "gemini-2.5-pro", 0);
+                    promptCost.value = cost;
+                } catch (costErr) {
+                    console.error("cost calculation error:", costErr);
+                    promptCost.value = 0;
+                }
+
+                isCountingTokens.value = false;
+            }
+        } catch (err) {
+            console.error("token counting error:", err);
+            tokenCountError.value = err.message || "token count failed";
+            geminiTokenCount.value = 0;
+            promptCost.value = 0;
+            isCountingTokens.value = false;
+        }
+    }, 2000); // 2000ms debounce to reduce api calls
+}
+
 // Create a computed property that tracks only relevant file tree changes
 // This excludes the 'expanded' property to prevent context regeneration on folder open/close
 const fileTreeForContextGeneration = computed(() => {
@@ -277,20 +350,16 @@ async function selectProjectFolder(selectedDir) {
 
             splitDiffs.value = []; // clear any previous splits when new project selected
 
-            if (!isFileTreeLoading.value && projectRoot.value) {
-                debouncedTriggerShotgunContextGeneration();
-            }
-
             steps.value.forEach((s) => {
                 s.completed = false;
                 s.everCompleted = false;
                 s.visited = s.id === 1; // only step 1 is visited at the start of a new project
             });
             currentStep.value = 1;
-            currentStep.value = 1;
-            // now that we are on step 1, trigger context generation
-            debouncedTriggerShotgunContextGeneration();
             addLog(`project folder selected: ${selectedDir}`, "info", "bottom");
+
+            // trigger automatic context generation after folder selection
+            debouncedTriggerShotgunContextGeneration();
         } else {
             isFileTreeLoading.value = false;
         }
@@ -322,7 +391,8 @@ async function loadFileTree(dirPath) {
     addLog(`loading file tree for: ${dirPath}`, "info", "bottom");
     try {
         const treeData = await ListFiles(dirPath);
-        fileTree.value = mapDataToTreeRecursive(treeData, null);
+        fileTree.value = mapDataToTreeRecursive(treeData, null, true); // pass true to auto-expand root
+
         addLog(
             `file tree loaded successfully. root items: ${fileTree.value.length}`,
             "info",
@@ -348,13 +418,15 @@ function calculateNodeExcludedState(node) {
     return false;
 }
 
-function mapDataToTreeRecursive(nodes, parent) {
+function mapDataToTreeRecursive(nodes, parent, autoExpandRoot = false) {
     if (!nodes) return [];
     return nodes.map((node) => {
         const isRootNode = parent === null;
+        const shouldExpand = node.isDir && isRootNode && autoExpandRoot;
+
         const reactiveNode = reactive({
             ...node,
-            expanded: node.isDir ? isRootNode : undefined,
+            expanded: shouldExpand,
             parent: parent,
             children: [],
         });
@@ -363,9 +435,16 @@ function mapDataToTreeRecursive(nodes, parent) {
         if (node.children && node.children.length > 0) {
             reactiveNode.children = mapDataToTreeRecursive(
                 node.children,
-                reactiveNode
+                reactiveNode,
+                false // don't auto-expand child nodes
             );
         }
+
+        // debug log for root nodes
+        if (isRootNode && autoExpandRoot) {
+            console.log(`DEBUG mapDataToTreeRecursive: root node "${node.name}" - isDir: ${node.isDir}, expanded: ${shouldExpand}, children count: ${reactiveNode.children.length}`);
+        }
+
         return reactiveNode;
     });
 }
@@ -427,16 +506,7 @@ function toggleExcludeNode(nodeToToggle) {
         "bottom"
     );
 
-    // DEBUG: add explicit context regeneration trigger after file selection changes
-    addLog(
-        `DEBUG: manually triggering context regeneration after toggle for ${nodeToToggle.name}`,
-        "debug",
-        "bottom"
-    );
-
-    // force context regeneration after toggle
-    shotgunPromptContext.value = ""; // clear existing context to force regeneration
-    debouncedTriggerShotgunContextGeneration();
+    // context regeneration will be handled automatically by the watcher
 }
 
 function updateAllNodesExcludedState(nodesToUpdate) {
@@ -531,11 +601,7 @@ function selectAllFiles() {
     selectNodesRecursive(fileTree.value);
     addLog("selected all files in the tree", "success", "bottom");
 
-    // force context regeneration with a slight delay to ensure UI updates first
-    setTimeout(() => {
-        shotgunPromptContext.value = ""; // Clear current context to ensure fresh generation
-        debouncedTriggerShotgunContextGeneration();
-    }, 100);
+    // context regeneration will be handled automatically by the watcher
 }
 
 function deselectAllFiles() {
@@ -582,9 +648,7 @@ function resetFileSelections() {
         "bottom"
     );
 
-    // regenerate context based on new selection state
-    shotgunPromptContext.value = "";
-    debouncedTriggerShotgunContextGeneration();
+    // context regeneration will be handled automatically by the watcher
 }
 
 function debouncedTriggerShotgunContextGeneration() {
@@ -869,6 +933,10 @@ async function handleStepAction(actionName, payload) {
             } else {
                 addLog("invalid directory path", "error", "bottom");
             }
+            break;
+        case "navigateToComposer":
+            // navigate to step 2 (compose prompt)
+            navigateToStep(2);
             break;
         case "contextGeneratedLocal":
             // handle context generated event from Step1PrepareContext
@@ -1162,6 +1230,7 @@ onMounted(() => {
 
 onBeforeUnmount(async () => {
     clearTimeout(debounceTimer);
+    clearTimeout(tokenDebounceTimer);
     if (projectRoot.value) {
         await StopFileWatcher().catch((err) =>
             console.error("error stopping file watcher on unmount:", err)
@@ -1199,6 +1268,7 @@ onBeforeUnmount(async () => {
     );
 });
 
+// automatic file tree watcher - triggers context regeneration when files change
 watch(
     [fileTreeForContextGeneration, useGitignore, useCustomIgnore],
     (
@@ -1231,11 +1301,9 @@ watch(
         );
         updateAllNodesExcludedState(fileTree.value);
 
-        // Force context regeneration when file tree changes
-        shotgunPromptContext.value = ""; // Clear existing context to force regeneration
+        // trigger context regeneration when file tree changes
         debouncedTriggerShotgunContextGeneration();
     }
-    // Note: removed { deep: true } since we're now watching a computed property that only includes relevant changes
 );
 
 watch(
@@ -1266,6 +1334,15 @@ watch(
     },
     { immediate: false }
 ); // 'immediate: false' to avoid running on initial undefined -> '' or '' -> initial value if set by default
+
+// background token counting watcher - triggers whenever finalPrompt changes (persists across steps)
+watch(
+    () => finalPrompt.value,
+    (newPrompt) => {
+        countTokensForPromptBackground(newPrompt);
+    },
+    { immediate: false }
+);
 
 // ensure listeners are registered once at startup
 onMounted(() => {
@@ -1316,11 +1393,18 @@ function handleSplitLineLimitUpdate(val) {
 
 function handleRefreshProject() {
     if (projectRoot.value && !isFileTreeLoading.value && !isGeneratingContext.value) {
-        addLog("manually refreshing project files", "info");
+        addLog("manually refreshing project files and regenerating context", "info");
         // temporarily disable pending reload to prevent double processing
         const wasPending = projectFilesChangedPendingReload.value;
         projectFilesChangedPendingReload.value = false;
-        loadFileTree(projectRoot.value);
+
+        // reload file tree and then trigger context generation
+        loadFileTree(projectRoot.value).then(() => {
+            // trigger context generation after file tree is loaded
+            addLog("file tree reloaded, now generating context...", "info");
+            debouncedTriggerShotgunContextGeneration();
+        });
+
         // restore pending state if it was set
         if (wasPending) {
             projectFilesChangedPendingReload.value = true;
@@ -1344,10 +1428,6 @@ async function openFolderProgrammatically(folderPath) {
 
         splitDiffs.value = [];
 
-        if (!isFileTreeLoading.value && projectRoot.value) {
-            debouncedTriggerShotgunContextGeneration();
-        }
-
         steps.value.forEach((s) => {
             s.completed = false;
             s.everCompleted = false;
@@ -1359,6 +1439,9 @@ async function openFolderProgrammatically(folderPath) {
             "info",
             "bottom"
         );
+
+        // trigger automatic context generation after folder selection
+        debouncedTriggerShotgunContextGeneration();
     } catch (err) {
         console.error("error opening folder programmatically:", err);
         const errorMsg = `failed to open folder: ${err.message || err}`;

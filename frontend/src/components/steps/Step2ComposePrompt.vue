@@ -3,7 +3,7 @@
         <!-- error display for context generation failures -->
         <div
             v-if="isErrorContext"
-            class="mb-4 p-4 border border-red-300 dark:border-red-700 rounded-lg bg-red-50 dark:bg-red-900 dark:bg-opacity-20 shadow-sm"
+            class="mb-4 p-4 border-2 border-red-300 dark:border-red-700 rounded-[0.4rem] bg-red-50 dark:bg-red-900 dark:bg-opacity-20 shadow-sm"
         >
             <h4
                 class="text-lg font-semibold mb-2 text-red-600 dark:text-red-400"
@@ -11,7 +11,7 @@
                 context generation error
             </h4>
             <pre
-                class="text-sm whitespace-pre-wrap bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100 p-3 border border-red-200 dark:border-red-700 rounded-md overflow-auto max-h-[150px]"
+                class="text-sm whitespace-pre-wrap bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100 p-3 border-2 border-red-200 dark:border-red-700 rounded-[0.4rem] overflow-auto max-h-[150px]"
                 >{{ errorMessage }}</pre
             >
             <p class="mt-3 text-sm text-red-600 dark:text-red-400">
@@ -24,7 +24,7 @@
         <div class="flex-grow flex flex-col space-y-4 overflow-hidden">
             <!-- user query input section - positioned at top in vertical layout -->
             <div
-                class="w-full h-96 flex flex-col space-y-2 overflow-y-hidden px-2 py-2 border border-accent rounded-md bg-white dark:bg-dark-surface"
+                class="w-full h-[32.4rem] lg:h-[42.1rem] flex flex-col space-y-2 overflow-y-hidden px-2 py-2 border-2 border-accent rounded-[0.4rem] bg-white dark:bg-[#3a3b60]"
             >
                 <div class="flex flex-col flex-grow-[3]">
                     <!-- <label
@@ -36,7 +36,7 @@
                         id="user-task-ai"
                         v-model="localUserTask"
                         spellcheck="false"
-                        class="w-full p-2 border border-accent rounded-md shadow-sm focus:ring-light-accent dark:focus:ring-dark-accent focus:border-light-accent dark:focus:border-dark-accent text-lg bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100 flex-grow resize-none"
+                        class="w-full p-2 border-2 border-accent rounded-[0.4rem] shadow-sm focus:ring-light-accent dark:focus:ring-dark-accent focus:border-light-accent dark:focus:border-dark-accent text-lg bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100 flex-grow resize-none"
                         placeholder="describe what the ai should do..."
                     ></textarea>
                 </div>
@@ -62,7 +62,7 @@
 
             <!-- generated prompt display section - positioned at bottom and takes remaining space -->
             <div
-                class="w-full flex-1 flex flex-col overflow-y-auto p-2 border border-accent rounded-md bg-white dark:bg-dark-surface"
+                class="w-full flex-1 flex flex-col overflow-y-auto p-2 border-2 border-accent rounded-[0.4rem] bg-white dark:bg-[#3a3b60]"
             >
                 <div class="flex justify-between items-center mb-2">
                     <div class="flex items-center space-x-2">
@@ -74,10 +74,10 @@
                                     :key="key"
                                     @click="selectedPromptTemplateKey = key"
                                     :class="[
-                                        'p-2 px-3 rounded-md text-sm flex items-center font-semibold hover:bg-sidebar-primary/90 focus:outline-none',
+                                        'text-sm flex items-center font-semibold px-4 py-2.5',
                                         selectedPromptTemplateKey === key
                                             ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                                            : 'text-gray-200 hover:text-white',
+                                            : '',
                                     ]"
                                     :disabled="isLoadingFinalPrompt"
                                     :title="template.name"
@@ -88,22 +88,15 @@
                                 </BaseButton>
                             </template>
                             <template v-else>
-                                <div class="relative inline-block w-full">
-                                    <select
-                                        v-model="selectedPromptTemplateKey"
+                                <div class="relative inline-block" style="width: 200px;" ref="dropdownRef">
+                                    <button
+                                        @click="isDropdownOpen = !isDropdownOpen"
                                         :disabled="isLoadingFinalPrompt"
-                                        class="appearance-none pr-8 p-2 rounded-md text-sm flex items-center border-2 font-semibold focus:outline-none border-border bg-background focus-visible:ring-primary text-gray-200 w-full"
+                                        class="appearance-none pr-8 p-2 text-sm flex items-center font-semibold focus:outline-none bg-background dark:bg-[#2a2a48] focus-visible:ring-primary text-gray-900 dark:text-gray-200 w-full border-2 border-accent rounded-[0.4rem]"
+                                        ref="dropdownBtn"
                                     >
-                                        <option
-                                            v-for="(
-                                                template, key
-                                            ) in promptTemplates"
-                                            :key="key"
-                                            :value="key"
-                                        >
-                                            {{ getShortName(key) }}
-                                        </option>
-                                    </select>
+                                        {{ getShortName(selectedPromptTemplateKey) }}
+                                    </button>
                                     <!-- chevron arrow icon -->
                                     <svg
                                         class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none h-4 w-4 text-gray-500 dark:text-gray-300"
@@ -117,6 +110,24 @@
                                             clip-rule="evenodd"
                                         />
                                     </svg>
+                                    <!-- custom dropdown menu - using fixed positioning to escape overflow-hidden parent -->
+                                    <div
+                                        v-if="isDropdownOpen"
+                                        :style="dropdownMenuStyles"
+                                        class="fixed bg-background dark:bg-[#2a2a48] border-2 border-accent rounded-[0.4rem] shadow-lg z-50 max-h-48 overflow-y-auto"
+                                    >
+                                        <button
+                                            v-for="(template, key) in promptTemplates"
+                                            :key="key"
+                                            @click="selectedPromptTemplateKey = key; isDropdownOpen = false;"
+                                            :class="[
+                                                'w-full px-4 py-2 text-left text-sm font-semibold hover:bg-muted transition-colors',
+                                                selectedPromptTemplateKey === key ? 'bg-sidebar-primary text-sidebar-primary-foreground' : 'text-foreground'
+                                            ]"
+                                        >
+                                            {{ getShortName(key) }}
+                                        </button>
+                                    </div>
                                 </div>
                             </template>
                         </div>
@@ -151,26 +162,12 @@
                         </span>
                     </div> -->
                     <div class="flex items-center space-x-3">
-                        <!-- refresh button -->
-                        <BaseButton
-                            @click="refreshPrompt"
-                            :disabled="isLoadingFinalPrompt"
-                            :class="[
-                                'p-2 px-3 rounded-md text-sm flex items-center font-semibold hover:bg-sidebar-primary/90 focus:outline-none',
-                                refreshing
-                                    ? 'bg-sidebar-primary text-white'
-                                    : 'text-gray-200 hover:text-white',
-                            ]"
-                            title="regenerate prompt"
-                        >
-                            <span class="text-base">update</span>
-                        </BaseButton>
                         <BaseButton
                             @click="copyFinalPromptToClipboard"
                             :disabled="
                                 !props.finalPrompt || isLoadingFinalPrompt
                             "
-                            class="px-3 py-2 bg-sidebar-primary text-sidebar-primary-foreground text-base font-semibold rounded-md hover:bg-sidebar-primary/90 focus:outline-none disabled:bg-gray-300 dark:disabled:bg-gray-700 flex items-center gap-1"
+                            class="px-3 py-2 bg-sidebar-primary text-sidebar-primary-foreground text-base font-semibold rounded-[0.4rem] hover:bg-sidebar-primary/90 focus:outline-none disabled:bg-gray-300 dark:disabled:bg-gray-700 flex items-center gap-1"
                             :class="{
                                 'bg-green-600 dark:bg-green-700': copySuccess,
                             }"
@@ -224,14 +221,110 @@
                     </p>
                 </div>
 
-                <textarea
-                    v-else
-                    :value="props.finalPrompt"
-                    @input="(e) => emit('update:finalPrompt', e.target.value)"
-                    spellcheck="false"
-                    class="w-full p-2 border border-accent rounded-md shadow-sm font-mono text-sm flex-grow bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100 resize-none"
-                    placeholder="the final prompt will be generated here..."
-                ></textarea>
+                <div
+                    v-else-if="props.finalPrompt"
+                    class="flex items-start justify-center"
+                >
+                    <div
+                        class="w-full px-4 py-2 border-2 border-accent rounded-[0.4rem] bg-gray-50 dark:bg-[#3a3b60] shadow-sm"
+                    >
+                        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                            <div class="flex items-center gap-2">
+                                <div class="flex flex-col">
+                                    <h3
+                                        class="text-base font-bold text-gray-800 dark:text-gray-200"
+                                    >
+                                        prompt ready
+                                    </h3>
+                                    <span
+                                        class="text-xs text-gray-500 dark:text-gray-400"
+                                    >
+                                        stored in memory and ready to paste
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col lg:flex-row items-start lg:items-center gap-2 lg:gap-4">
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="text-xs text-gray-500 dark:text-gray-400 uppercase"
+                                        >characters</span
+                                    >
+                                    <span
+                                        class="text-xl font-bold text-gray-800 dark:text-gray-200"
+                                        >{{ charCount.toLocaleString() }}</span
+                                    >
+                                </div>
+                                <div class="hidden lg:block h-6 w-px bg-accent"></div>
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="text-xs text-gray-500 dark:text-gray-400 uppercase"
+                                        >size</span
+                                    >
+                                    <span
+                                        class="text-xl font-bold text-gray-800 dark:text-gray-200"
+                                        >{{
+                                            (charCount / 1024).toFixed(1)
+                                        }}
+                                        kb</span
+                                    >
+                                </div>
+                                <div class="hidden lg:block h-6 w-px bg-accent"></div>
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="text-xs text-gray-500 dark:text-gray-400 uppercase"
+                                        >token</span
+                                    >
+                                    <span
+                                        v-if="isCountingTokens"
+                                        class="text-xl font-bold text-gray-500 dark:text-gray-400 animate-pulse"
+                                        >recounting</span
+                                    >
+                                    <span
+                                        v-else-if="tokenCountError"
+                                        class="text-xl font-bold text-red-600 dark:text-red-400"
+                                        :title="tokenCountError"
+                                        >error</span
+                                    >
+                                    <span
+                                        v-else
+                                        class="text-xl font-bold text-gray-800 dark:text-gray-200"
+                                        >{{ geminiTokenCount.toLocaleString() }}</span
+                                    >
+                                </div>
+                                <div class="hidden lg:block h-6 w-px bg-accent"></div>
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="text-xs text-gray-500 dark:text-gray-400 uppercase"
+                                        >cost</span
+                                    >
+                                    <span
+                                        v-if="isCountingTokens"
+                                        class="text-xl font-bold text-gray-500 dark:text-gray-400 animate-pulse"
+                                        >recounting</span
+                                    >
+                                    <span
+                                        v-else-if="tokenCountError"
+                                        class="text-xl font-bold text-red-600 dark:text-red-400"
+                                        :title="tokenCountError"
+                                        >error</span
+                                    >
+                                    <span
+                                        v-else
+                                        class="text-xl font-bold text-gray-800 dark:text-gray-200"
+                                        >{{ promptCost.toFixed(4) }} $</span
+                                    >
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else class="flex-grow flex justify-center items-center">
+                    <p class="text-gray-500 dark:text-gray-300">
+                        prompt will be generated automatically
+                    </p>
+                </div>
             </div>
         </div>
     </div>
@@ -239,7 +332,6 @@
 
 <script setup>
 import { ref, watch, onMounted, computed, onUnmounted } from "vue";
-import { CountGeminiTokens } from "../../../wailsjs/go/main/App";
 import { LogError as LogErrorRuntime } from "../../../wailsjs/runtime/runtime";
 import BaseButton from "../BaseButton.vue";
 
@@ -256,7 +348,6 @@ const props = defineProps({
         default: "",
     },
     platform: {
-        // to know if we are on macos
         type: String,
         default: "unknown",
     },
@@ -271,6 +362,22 @@ const props = defineProps({
     finalPrompt: {
         type: String,
         default: "",
+    },
+    geminiTokenCount: {
+        type: Number,
+        default: 0,
+    },
+    isCountingTokens: {
+        type: Boolean,
+        default: false,
+    },
+    tokenCountError: {
+        type: String,
+        default: "",
+    },
+    promptCost: {
+        type: Number,
+        default: 0,
     },
 });
 
@@ -330,10 +437,23 @@ const selectedPromptTemplateKey = ref(Object.keys(promptTemplates)[0]); // defau
 const isLoadingFinalPrompt = ref(false);
 const copyButtonText = ref("copy");
 const copySuccess = ref(false);
-const geminiTokenCount = ref(0);
-const isCountingTokens = ref(false);
-const tokenCountError = ref("");
-let tokenDebounceTimer = null;
+const isDropdownOpen = ref(false);
+const dropdownRef = ref(null);
+const dropdownBtn = ref(null);
+
+// computed dropdown menu position for fixed positioning
+const dropdownMenuStyles = computed(() => {
+    if (!dropdownBtn.value || !isDropdownOpen.value) {
+        return { display: 'none' };
+    }
+
+    const rect = dropdownBtn.value.getBoundingClientRect();
+    return {
+        left: rect.left + 'px',
+        top: (rect.top - 192) + 'px', // 192px = max-h-48 (12rem * 16px)
+        width: rect.width + 'px',
+    };
+});
 
 // refresh button state
 const refreshing = ref(false);
@@ -348,6 +468,10 @@ let userTaskInputDebounceTimer = null;
 const isFirstMount = ref(true);
 
 const localUserTask = ref(props.userTask);
+// track if prompt needs regeneration to avoid unnecessary updates
+const promptNeedsUpdate = ref(false);
+// manual trigger for prompt generation
+const shouldGeneratePrompt = ref(false);
 
 // Error detection (same logic as Step 1)
 const isErrorContext = computed(() => {
@@ -442,17 +566,29 @@ onMounted(async () => {
         isFirstMount.value = false;
     }
 
-    // always generate initial prompt if not already available
-    // this ensures token calculation triggers even when file list context or user task are initially empty
-    if (!props.finalPrompt) {
+    // automatically generate prompt on mount if we have context
+    // generate even without userTask to show the prompt immediately
+    if (props.fileListContext) {
         debouncedUpdateFinalPrompt();
     }
 });
 
-async function updateFinalPrompt() {
+async function updateFinalPrompt(forceUpdate = false) {
+    // skip if not needed and not forced
+    if (
+        !forceUpdate &&
+        !promptNeedsUpdate.value &&
+        !shouldGeneratePrompt.value
+    ) {
+        return;
+    }
+
     isLoadingFinalPrompt.value = true;
-    // removed artificial delay for better responsiveness
-    // await new Promise((resolve) => setTimeout(resolve, 100));
+    promptNeedsUpdate.value = false;
+    shouldGeneratePrompt.value = false;
+
+    // use requestanimationframe for smoother ui updates
+    await new Promise((resolve) => requestAnimationFrame(resolve));
 
     const currentTemplateContent =
         promptTemplates[selectedPromptTemplateKey.value].content;
@@ -478,18 +614,21 @@ async function updateFinalPrompt() {
     // only update if the prompt has actually changed
     if (populatedPrompt !== props.finalPrompt) {
         emit("update:finalPrompt", populatedPrompt);
-        // trigger token counting only when prompt actually changes
-        countTokensForPrompt(populatedPrompt);
+        // defer token counting to avoid blocking ui
+        setTimeout(() => countTokensForPrompt(populatedPrompt), 100);
     }
 
     isLoadingFinalPrompt.value = false;
 }
 
 function debouncedUpdateFinalPrompt() {
+    // mark prompt as needing update but don't generate immediately
+    promptNeedsUpdate.value = true;
     clearTimeout(finalPromptDebounceTimer);
     finalPromptDebounceTimer = setTimeout(() => {
+        shouldGeneratePrompt.value = true;
         updateFinalPrompt();
-    }, 800); // increased from 300ms to 800ms for better performance
+    }, 1200); // increased to 1200ms to reduce update frequency during typing
 }
 
 // refresh prompt functionality
@@ -499,8 +638,8 @@ function refreshPrompt() {
     // visual feedback
     refreshing.value = true;
 
-    // force prompt regeneration
-    updateFinalPrompt();
+    // force prompt regeneration with the force flag
+    updateFinalPrompt(true);
 
     // reset refreshing state after a short delay
     setTimeout(() => {
@@ -519,58 +658,28 @@ watch(
 
 watch(localUserTask, (currentValue) => {
     clearTimeout(userTaskInputDebounceTimer);
+    // emit user task changes and trigger auto-regeneration
     userTaskInputDebounceTimer = setTimeout(() => {
         if (currentValue !== props.userTask) {
             emit("update:userTask", currentValue);
+            debouncedUpdateFinalPrompt(); // trigger auto-update
         }
-    }, 600); // increased from 300ms to 600ms to reduce update frequency
+    }, 300);
 });
 
+// watch for file list context changes and auto-regenerate
 watch(
-    [
-        () => props.userTask,
-        () => props.rulesContent,
-        () => props.fileListContext,
-        selectedPromptTemplateKey,
-    ],
+    () => props.fileListContext,
     () => {
         debouncedUpdateFinalPrompt();
     },
-    { deep: true }
+    { deep: false }
 );
 
-// removed redundant watcher - selectedPromptTemplateKey is already watched in the main watcher above
-
-const countTokensForPrompt = (prompt) => {
-    clearTimeout(tokenDebounceTimer);
-    if (!prompt) {
-        geminiTokenCount.value = 0;
-        tokenCountError.value = "";
-        return;
-    }
-    isCountingTokens.value = true;
-    tokenCountError.value = "";
-    tokenDebounceTimer = setTimeout(async () => {
-        try {
-            const count = await CountGeminiTokens(prompt);
-            geminiTokenCount.value = count;
-        } catch (err) {
-            console.error("token counting error:", err);
-            tokenCountError.value = err.message || "token count failed";
-            geminiTokenCount.value = 0;
-        } finally {
-            isCountingTokens.value = false;
-        }
-    }, 500); // increased from 200ms to 500ms to reduce token counting frequency
-};
-
-watch(
-    () => props.finalPrompt,
-    (newPrompt) => {
-        countTokensForPrompt(newPrompt);
-    },
-    { immediate: true }
-);
+// watch for template selection changes and auto-regenerate
+watch(selectedPromptTemplateKey, () => {
+    debouncedUpdateFinalPrompt();
+});
 
 async function copyFinalPromptToClipboard() {
     if (!props.finalPrompt) return;
@@ -602,3 +711,18 @@ async function copyFinalPromptToClipboard() {
 
 defineExpose({});
 </script>
+
+<style scoped>
+@keyframes fastPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: fastPulse 0.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+</style>

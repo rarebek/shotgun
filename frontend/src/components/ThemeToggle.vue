@@ -1,14 +1,19 @@
 <template>
     <button
         @click="toggleTheme"
-        class="flex items-center justify-center p-2 rounded-md hover:bg-accent dark:hover:bg-gray-700 transition-colors"
+        :class="[
+            'text-xs px-2 py-2 flex items-center gap-2 group rounded-[0.4rem] transition-colors',
+            isDark
+                ? 'bg-slate-700 text-yellow-300 hover:bg-slate-600 hover:text-yellow-200'
+                : 'bg-slate-300 text-slate-700 hover:bg-slate-400 hover:text-slate-900'
+        ]"
         aria-label="Toggle theme"
     >
         <!-- sun icon (shown in dark mode) -->
         <svg
             v-if="isDark"
             xmlns="http://www.w3.org/2000/svg"
-            class="h-5 w-5 text-yellow-400"
+            class="h-5 w-5"
             viewBox="0 0 20 20"
             fill="currentColor"
         >
@@ -22,7 +27,7 @@
         <svg
             v-else
             xmlns="http://www.w3.org/2000/svg"
-            class="h-5 w-5 text-foreground"
+            class="h-5 w-5"
             viewBox="0 0 20 20"
             fill="currentColor"
         >
@@ -34,7 +39,7 @@
 </template>
 
 <script setup>
-import { inject, computed } from "vue";
+import { inject } from "vue";
 
 const isDark = inject("isDark");
 const toggleTheme = inject("toggleTheme");

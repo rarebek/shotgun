@@ -2,7 +2,7 @@
     <button
         data-slot="button"
         :class="[
-            'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-200',
+            'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[0.4rem] text-sm font-medium transition-all duration-200',
             'disabled:pointer-events-none disabled:opacity-50',
             '[&_svg]:pointer-events-none [&_svg:not([class*=\'size-\'])]:size-4 [&_svg]:shrink-0',
             'outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
@@ -20,7 +20,7 @@
 </template>
 
 <script setup>
-import { defineProps, computed } from "vue";
+import { computed } from "vue";
 
 const props = defineProps({
     disabled: {
@@ -72,6 +72,7 @@ const sizeClasses = computed(() => {
 <style scoped>
 button {
     position: relative;
+    border-radius: 0.4rem!important;
 }
 
 button:active::after {

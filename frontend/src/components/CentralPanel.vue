@@ -21,6 +21,10 @@
             :final-prompt="props.finalPrompt"
             @update:userTask="(val) => emit('update:userTask', val)"
             @update:rulesContent="(val) => emit('update:rulesContent', val)"
+            :gemini-token-count="props.geminiTokenCount"
+            :is-counting-tokens="props.isCountingTokens"
+            :token-count-error="props.tokenCountError"
+            :prompt-cost="props.promptCost"
         />
         <Step3ExecutePrompt
             v-if="currentStep === 3"
@@ -44,7 +48,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, ref, computed, watch } from "vue";
+import { ref, computed, watch } from "vue";
 import Step1CopyStructure from "./steps/Step1PrepareContext.vue";
 import Step2ComposePrompt from "./steps/Step2ComposePrompt.vue";
 import Step3ExecutePrompt from "./steps/Step3ExecutePrompt.vue";
@@ -68,6 +72,10 @@ const props = defineProps({
     splitLineLimit: { type: Number, default: 500 },
     shotgunGitDiff: { type: String, default: "" },
     splitLineLimitValue: { type: Number, default: 500 },
+    geminiTokenCount: { type: Number, default: 0 },
+    isCountingTokens: { type: Boolean, default: false },
+    tokenCountError: { type: String, default: "" },
+    promptCost: { type: Number, default: 0 },
 });
 
 const initialGitDiff = computed(() => {

@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"                // added for os.readfile
 	goruntime "runtime" // alias for standard library runtime
+	"runtime/debug"     // for gc tuning
 
 	// required for runtime.opendirectorydialog wrapper if used
 	"github.com/wailsapp/wails/v2"
@@ -37,6 +38,17 @@ func (a *app) selectdirectory() (string, error) {
 */
 
 func main() {
+	// configure go runtime for maximum performance
+	numCPU := goruntime.NumCPU()
+	goruntime.GOMAXPROCS(numCPU) // use all available cpu cores
+
+	// reduce garbage collection frequency for better performance
+	// default is 100, higher values = less frequent gc but more memory usage
+	// 200 means gc runs when heap grows to 2x the size after last collection
+	debug.SetGCPercent(200)
+
+	log.Printf("performance config: GOMAXPROCS=%d (using all %d logical cpus), GOGC=200", numCPU, numCPU)
+
 	// parse command line arguments for an initial folder path. if the user drags
 	// a folder onto the executable, windows will pass the folder path as the
 	// first command line argument.

@@ -31,6 +31,13 @@ const maxOutputSizeBytes = 50_000_000  // 50mb
 const maxFileReadSizeBytes = 500_000_000 // 500mb
 var ErrContextTooLong = errors.New("context is too long")
 
+// concurrency configuration for large-scale codebase processing
+const (
+	maxFileWorkers     = 64  // maximum concurrent file readers
+	maxDirWorkers      = 32  // maximum concurrent directory scanners
+	workQueueSize      = 256 // buffered channel size for work distribution
+)
+
 // directories that should never appear in the generated context tree
 var alwaysExcludedDirs = map[string]bool{
 	".git": true,
@@ -241,6 +248,11 @@ func buildTreeRecursive(ctx context.Context, currentPath, rootPath string, gitIg
 		return nil, err
 	}
 
+	// use parallel processing for large directories (optimization for large codebases)
+	if len(entries) > 50 && depth < 3 {
+		return buildTreeRecursiveParallel(ctx, currentPath, rootPath, gitIgn, customIgn, depth, inheritedGitIgnored, inheritedCustomIgnored, entries)
+	}
+
 	var nodes []*FileNode
 	for _, entry := range entries {
 		nodePath := filepath.Join(currentPath, entry.Name())
@@ -315,6 +327,248 @@ func buildTreeRecursive(ctx context.Context, currentPath, rootPath string, gitIg
 		return strings.ToLower(nodes[i].Name) < strings.ToLower(nodes[j].Name)
 	})
 	return nodes, nil
+}
+
+// buildTreeRecursiveParallel processes large directories with worker pool for better performance
+func buildTreeRecursiveParallel(ctx context.Context, currentPath, rootPath string, gitIgn *gitignore.GitIgnore, customIgn *gitignore.GitIgnore, depth int, inheritedGitIgnored, inheritedCustomIgnored bool, entries []os.DirEntry) ([]*FileNode, error) {
+	numWorkers := maxDirWorkers
+	if numWorkers > len(entries) {
+		numWorkers = len(entries)
+	}
+
+	type workItem struct {
+		index int
+		entry os.DirEntry
+	}
+
+	type result struct {
+		index int
+		node  *FileNode
+		err   error
+	}
+
+	workChan := make(chan workItem, workQueueSize)
+	resultChan := make(chan result, len(entries))
+
+	var wg sync.WaitGroup
+
+	// start worker pool
+	for w := 0; w < numWorkers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for work := range workChan {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+
+				entry := work.entry
+				nodePath := filepath.Join(currentPath, entry.Name())
+				relPath, _ := filepath.Rel(rootPath, nodePath)
+
+				isGitignored := inheritedGitIgnored
+				isCustomIgnored := inheritedCustomIgnored
+
+				if !inheritedGitIgnored || !inheritedCustomIgnored {
+					pathToMatch := relPath
+					if entry.IsDir() {
+						if !strings.HasSuffix(pathToMatch, string(os.PathSeparator)) {
+							pathToMatch += string(os.PathSeparator)
+						}
+					}
+
+					if !inheritedGitIgnored && gitIgn != nil {
+						isGitignored = gitIgn.MatchesPath(pathToMatch)
+					}
+					if !inheritedCustomIgnored && customIgn != nil {
+						isCustomIgnored = customIgn.MatchesPath(pathToMatch)
+					}
+				}
+
+				node := &FileNode{
+					Name:            entry.Name(),
+					Path:            nodePath,
+					RelPath:         relPath,
+					IsDir:           entry.IsDir(),
+					IsGitignored:    isGitignored,
+					IsCustomIgnored: isCustomIgnored,
+				}
+
+				if entry.IsDir() {
+					if !isGitignored && !isCustomIgnored {
+						children, err := buildTreeRecursive(ctx, nodePath, rootPath, gitIgn, customIgn, depth+1, isGitignored, isCustomIgnored)
+						if err != nil && !errors.Is(err, context.Canceled) {
+							runtime.LogWarningf(context.Background(), "error building subtree for %s: %v", nodePath, err)
+						} else {
+							node.Children = children
+						}
+					} else {
+						node.Children = []*FileNode{}
+					}
+				}
+
+				resultChan <- result{index: work.index, node: node, err: nil}
+			}
+		}()
+	}
+
+	// distribute work
+	go func() {
+		for i, entry := range entries {
+			select {
+			case <-ctx.Done():
+				close(workChan)
+				return
+			case workChan <- workItem{index: i, entry: entry}:
+			}
+		}
+		close(workChan)
+	}()
+
+	// wait for all workers to finish
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	// collect results in order
+	results := make([]*FileNode, len(entries))
+	for res := range resultChan {
+		if res.err != nil {
+			return nil, res.err
+		}
+		results[res.index] = res.node
+	}
+
+	// check for cancellation
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	// sort nodes: directories first, then files, then alphabetically
+	sort.SliceStable(results, func(i, j int) bool {
+		if results[i].IsDir && !results[j].IsDir {
+			return true
+		}
+		if !results[i].IsDir && results[j].IsDir {
+			return false
+		}
+		return strings.ToLower(results[i].Name) < strings.ToLower(results[j].Name)
+	})
+
+	return results, nil
+}
+
+// fileReadResult holds the result of reading a single file for context generation
+type fileReadResult struct {
+	index          int
+	relPath        string
+	content        string
+	isOversized    bool
+	err            error
+}
+
+// readFilesParallel reads multiple files in parallel using a worker pool
+func readFilesParallel(ctx context.Context, fileInfos []struct{index int; path string; relPath string}, rootDir string) ([]fileReadResult, error) {
+	if len(fileInfos) == 0 {
+		return []fileReadResult{}, nil
+	}
+
+	numWorkers := maxFileWorkers
+	if numWorkers > len(fileInfos) {
+		numWorkers = len(fileInfos)
+	}
+
+	type workItem struct {
+		index   int
+		path    string
+		relPath string
+	}
+
+	workChan := make(chan workItem, workQueueSize)
+	resultChan := make(chan fileReadResult, len(fileInfos))
+
+	var wg sync.WaitGroup
+
+	// start worker pool for file reading
+	for w := 0; w < numWorkers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for work := range workChan {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+
+				result := fileReadResult{
+					index:   work.index,
+					relPath: work.relPath,
+				}
+
+				// check file size before reading
+				fileInfo, statErr := os.Stat(work.path)
+				if statErr == nil && fileInfo.Size() > maxFileReadSizeBytes {
+					result.isOversized = true
+					result.content = "[file omitted: too large]"
+					resultChan <- result
+					continue
+				}
+
+				content, err := os.ReadFile(work.path)
+				if err != nil {
+					result.err = err
+					result.content = fmt.Sprintf("error reading file: %v", err)
+				} else {
+					if isTextContent(content) {
+						result.content = string(content)
+					} else {
+						result.content = "[non-text file content omitted]"
+					}
+				}
+
+				resultChan <- result
+			}
+		}()
+	}
+
+	// distribute work
+	go func() {
+		for _, fileInfo := range fileInfos {
+			select {
+			case <-ctx.Done():
+				close(workChan)
+				return
+			case workChan <- workItem{index: fileInfo.index, path: fileInfo.path, relPath: fileInfo.relPath}:
+			}
+		}
+		close(workChan)
+	}()
+
+	// wait for all workers
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	// collect results in order
+	results := make([]fileReadResult, len(fileInfos))
+	for res := range resultChan {
+		results[res.index] = res
+	}
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	return results, nil
 }
 
 // contextgenerator manages the asynchronous generation of shotgun context
@@ -407,6 +661,12 @@ func (a *App) RequestShotgunContextGeneration(rootDir string, excludedPaths []st
 func (a *App) countProcessableItems(jobCtx context.Context, rootDir string, excludedMap map[string]bool) (int, error) {
 	count := 1 // for the root directory line itself
 
+	// use goroutines for faster counting in large directories
+	type countResult struct {
+		count int
+		err   error
+	}
+
 	var counterHelper func(currentPath string, parentExcluded bool) error
 	counterHelper = func(currentPath string, parentExcluded bool) error {
 		select {
@@ -470,9 +730,21 @@ func (a *App) countProcessableItems(jobCtx context.Context, rootDir string, excl
 type generationProgressState struct {
 	processedItems int
 	totalItems     int
+	lastEmit       time.Time
+	emitInterval   time.Duration
 }
 
 func (a *App) emitProgress(state *generationProgressState) {
+	// throttle progress events to avoid overwhelming the frontend
+	now := time.Now()
+	if now.Sub(state.lastEmit) < state.emitInterval {
+		// skip emission if too soon, unless it's the final update
+		if state.processedItems < state.totalItems {
+			return
+		}
+	}
+
+	state.lastEmit = now
 	runtime.EventsEmit(a.ctx, "shotgunContextGenerationProgress", map[string]int{
 		"current": state.processedItems,
 		"total":   state.totalItems,
@@ -495,7 +767,12 @@ func (a *App) generateShotgunOutputWithProgress(jobCtx context.Context, rootDir 
 		return "", fmt.Errorf("failed to count processable items: %w", err)
 	}
 	runtime.LogInfof(a.ctx, "context generation starting: %d items to process (excluded directories not traversed)", totalItems)
-	progressState := &generationProgressState{processedItems: 0, totalItems: totalItems}
+	progressState := &generationProgressState{
+		processedItems: 0,
+		totalItems:     totalItems,
+		lastEmit:       time.Now(),
+		emitInterval:   100 * time.Millisecond, // emit progress at most 10 times per second
+	}
 	a.emitProgress(progressState) // initial progress (0 / total)
 
 	var output strings.Builder
@@ -1311,6 +1588,54 @@ func (a *App) CountGeminiTokens(text string) (int, error) {
 	}
 
 	return int(resp.TotalTokens), nil
+}
+
+// pricingrate holds the pricing information for a gemini model
+type PricingRate struct {
+	Model              string  `json:"model"`
+	InputPricePer1M    float64 `json:"inputPricePer1M"`    // price per 1 million input tokens
+	OutputPricePer1M   float64 `json:"outputPricePer1M"`   // price per 1 million output tokens
+}
+
+// getmodelpricing returns the pricing rates for a given model
+func (a *App) getModelPricing(modelName string) PricingRate {
+	// gemini 2.5 pro pricing from official google docs (per 1 million tokens)
+	// note: using only gemini-2.5-pro as per requirements
+	pricingMap := map[string]PricingRate{
+		"gemini-2.5-pro": {
+			Model:            "gemini-2.5-pro",
+			InputPricePer1M:  1.25,    // $1.25 per 1M input tokens (≤200k token prompts)
+			OutputPricePer1M: 10.00,   // $10.00 per 1M output tokens (≤200k token prompts)
+		},
+	}
+
+	if rate, exists := pricingMap[modelName]; exists {
+		return rate
+	}
+
+	// default to gemini-2.5-pro if model not found
+	return pricingMap["gemini-2.5-pro"]
+}
+
+// calculatepromptcost calculates the estimated cost of a prompt based on input token count only
+// uses tiered pricing: $1.25/1M for prompts ≤200k tokens, $2.50/1M for prompts >200k tokens
+func (a *App) CalculatePromptCost(inputTokens int, modelName string, estimatedOutputTokens int) (float64, error) {
+	if inputTokens < 0 {
+		return 0, fmt.Errorf("input tokens cannot be negative")
+	}
+
+	// tiered pricing for gemini-2.5-pro: $1.25 for ≤200k, $2.50 for >200k
+	var pricePerMillion float64
+	if inputTokens <= 200000 {
+		pricePerMillion = 1.25
+	} else {
+		pricePerMillion = 2.50
+	}
+
+	// calculate cost based on input tokens only: (tokens / 1,000,000) * pricePerMillion
+	inputCost := (float64(inputTokens) / 1_000_000.0) * pricePerMillion
+
+	return inputCost, nil
 }
 
 // executegeminirequest sends a prompt to Google Gemini API

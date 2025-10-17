@@ -1,285 +1,151 @@
 <template>
-    <div class="p-6 flex flex-col h-full">
-        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
-            step 3: execute & prepare prompt
-        </h2>
+    <div class="p-4 h-full flex flex-col space-y-4">
+        <!-- box 1: title and description -->
+        <div class="px-2 py-2 border-2 border-accent rounded-[0.4rem] bg-white dark:bg-[#3a3b60]">
+            <h1 class="text-2xl text-gray-900 dark:text-gray-100">prepare the diff to apply</h1>
+            <p class="text-sm text-gray-600 dark:text-gray-300">this tool will split the diff into smaller parts to make it easier to apply.</p>
+        </div>
 
-        <div class="flex flex-row items-center mb-4 space-x-4">
+        <!-- box 2: textarea with copy/clear buttons -->
+        <div class="flex-grow flex flex-col overflow-hidden px-2 py-2 border-2 border-accent rounded-[0.4rem] bg-white dark:bg-[#3a3b60]">
             <BaseButton
-                @click="executeRequest"
+                v-if="localShotgunGitDiffInput.trim()"
+                @click="copyDiffToClipboard"
                 class="text-xs px-2 py-1"
-                :disabled="isRequestActive || !isReadyToExecute"
+                :class="{ 'bg-green-600 dark:bg-green-700': copySuccess }"
             >
-                <span class="text-base">execute request</span>
+                <template #icon>
+                    <svg
+                        v-if="!copySuccess"
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+                        />
+                    </svg>
+                    <svg
+                        v-else
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M5 13l4 4L19 7"
+                        />
+                    </svg>
+                </template>
+                <span class="text-base">{{
+                    copySuccess ? "copied!" : "copy"
+                }}</span>
             </BaseButton>
             <BaseButton
-                @click="showApiKeyModal = true"
-                class="text-xs px-2 py-1"
-            >
-                <span class="text-base">set api key</span>
-            </BaseButton>
-            <BaseButton
-                @click="toggleModel"
-                class="text-xs px-2 py-1"
-                :disabled="isRequestActive || !isReadyToExecute"
-                title="click to switch between gemini models"
-            >
-                <span class="text-base">{{ selectedModel }}</span>
-            </BaseButton>
-            <!-- token count pill (styled like step 2) -->
-            <span v-if="isTokenChecking" class="text-sm text-gray-500 ml-2"
-                >counting...</span
-            >
-            <span
-                v-else-if="tokenCountError"
-                class="text-sm font-bold px-2 py-1 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 ml-2 max-w-[300px] truncate"
-                :title="tokenCountError"
-                >{{ tokenCountError }}</span
-            >
-            <span
-                v-else
-                :class="[
-                    'text-sm font-bold px-2 py-1 rounded-xl',
-                    charCountColorClass === 'text-green-600'
-                        ? 'bg-green-100 dark:bg-green-900/30'
-                        : charCountColorClass === 'text-yellow-500'
-                          ? 'bg-yellow-100 dark:bg-yellow-900/30'
-                          : 'bg-red-100 dark:bg-red-900/30',
-                ]"
-                :title="tooltipText"
-            >
-                {{ promptTokensCount.toLocaleString() }} tokens
-            </span>
-            <div
-                v-if="requestError"
-                class="ml-2 max-w-[300px] truncate text-sm rounded-xl bg-red-600 dark:bg-red-700 text-white px-3 py-1 font-mono"
-                title="{{ requestError }}"
-            >
-                {{ requestError }}
-            </div>
-            <div
-                v-if="isPromptTooLarge"
-                class="ml-2 max-w-[300px] truncate text-sm rounded-xl bg-red-600 dark:bg-red-700 text-white px-3 py-1 font-mono"
-            >
-                prompt exceeds free api limit of 250,000 tokens
-            </div>
-            <div
-                class="flex items-center w-[4rem] justify-center"
-                v-if="isRequestActive"
-            >
-                <div class="text-gray-700 dark:text-gray-300 font-mono">
-                    {{ formattedTime }}
-                </div>
-            </div>
-            <div class="w-[4rem] justify-center" v-else></div>
-            <BaseButton
-                @click="stopRequest"
+                v-if="localShotgunGitDiffInput.trim()"
+                @click="clearTextarea"
                 class="text-xs px-2 py-1"
                 variant="danger"
-                v-if="isRequestActive"
+                :class="{ 'bg-red-600 dark:bg-red-700': clearSuccess }"
             >
-                <span class="text-base">stop request</span>
+                <template #icon>
+                    <svg
+                        v-if="!clearSuccess"
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                    </svg>
+                    <svg
+                        v-else
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M5 13l4 4L19 7"
+                        />
+                    </svg>
+                </template>
+                <span class="text-base">{{
+                    clearSuccess ? "cleared!" : "clear"
+                }}</span>
             </BaseButton>
-        </div>
-
-        <ApiKeyModal
-            :show="showApiKeyModal"
-            :initial-api-key="geminiApiKey"
-            @close="showApiKeyModal = false"
-            @save="handleSaveApiKey"
-        />
-
-        <p class="text-gray-600 dark:text-gray-300 mb-4 text-sm">
-            <li>
-                open any agentic code tool and ask 'apply diff' + copy-paste the
-                diff.
-            </li>
-            <li>
-                use the execute request button above to send the prompt directly
-                to gemini api.
-            </li>
-        </p>
-
-        <hr class="my-4 border-accent" />
-        <div class="flex justify-between items-center mb-2">
-            <div class="text-gray-600 dark:text-gray-300">
-                <strong>prepare the diff to apply</strong>
-                <br />
-                this tool will split the diff into smaller parts to make it
-                easier to apply.
-            </div>
-            <div class="flex items-center gap-2">
-                <BaseButton
-                    v-if="localShotgunGitDiffInput.trim()"
-                    @click="copyDiffToClipboard"
-                    class="text-xs px-2 py-1"
-                    :class="{ 'bg-green-600 dark:bg-green-700': copySuccess }"
-                >
-                    <template #icon>
-                        <svg
-                            v-if="!copySuccess"
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-4 w-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
-                            />
-                        </svg>
-                        <svg
-                            v-else
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-4 w-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M5 13l4 4L19 7"
-                            />
-                        </svg>
-                    </template>
-                    <span class="text-base">{{
-                        copySuccess ? "copied!" : "copy"
-                    }}</span>
-                </BaseButton>
-                <BaseButton
-                    v-if="localShotgunGitDiffInput.trim()"
-                    @click="clearTextarea"
-                    class="text-xs px-2 py-1"
-                    variant="danger"
-                    :class="{ 'bg-red-600 dark:bg-red-700': clearSuccess }"
-                >
-                    <template #icon>
-                        <svg
-                            v-if="!clearSuccess"
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-4 w-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                        </svg>
-                        <svg
-                            v-else
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-4 w-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M5 13l4 4L19 7"
-                            />
-                        </svg>
-                    </template>
-                    <span class="text-base">{{
-                        clearSuccess ? "cleared!" : "clear"
-                    }}</span>
-                </BaseButton>
-            </div>
-        </div>
-
-        <div class="mb-4">
             <textarea
                 id="shotgun-git-diff-input"
                 v-model="localShotgunGitDiffInput"
-                rows="10"
+                rows="80"
                 spellcheck="false"
-                class="w-full p-2 border border-accent rounded-md shadow-sm focus:ring-light-accent dark:focus:ring-dark-accent focus:border-light-accent dark:focus:border-dark-accent text-sm font-mono bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100"
+                class="w-full p-2 border-2 border-accent rounded-[0.4rem] shadow-sm focus:ring-light-accent dark:focus:ring-dark-accent focus:border-light-accent dark:focus:border-dark-accent text-sm font-mono bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100 resize-none"
                 placeholder="paste the git diff output here, e.g., diff --git a/file.txt b/file.txt..."
             ></textarea>
         </div>
 
-        <div class="mb-4">
-            <label
-                for="split-line-limit"
-                class="block text-base font-bold text-gray-700 dark:text-gray-300 mb-1"
-                >approx. lines per split</label
-            >
+        <!-- box 3: description, input, and button -->
+        <div class="px-2 py-2 border-2 border-accent rounded-[0.4rem] bg-white dark:bg-[#3a3b60]">
             <p class="text-gray-600 dark:text-gray-300 mb-2 text-sm">
-                this will attempt to split the diff into the specified number of
-                lines, while keeping the original structure and the chunks.
+                this will attempt to split the diff into the specified number of lines, while keeping the original structure and the chunks.
                 <br />
-                the exact number of lines per split is not guaranteed, but the
-                diff will be split into as many parts as possible.
+                the exact number of lines per split is not guaranteed, but the diff will be split into as many parts as possible.
             </p>
-            <div class="flex items-center space-x-2 mt-2">
+            <div class="flex items-center space-x-2 mb-3">
                 <input
                     type="number"
                     id="split-line-limit"
                     v-model.number="localSplitLineLimit"
                     min="50"
                     step="50"
-                    class="w-1/8 p-2 border border-accent rounded-md shadow-sm focus:ring-light-accent dark:focus:ring-dark-accent focus:border-light-accent dark:focus:border-dark-accent text-sm bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100"
+                    class="w-1/8 p-2 border-2 border-accent rounded-[0.4rem] shadow-sm focus:ring-light-accent dark:focus:ring-dark-accent focus:border-light-accent dark:focus:border-dark-accent text-sm bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100"
                 />
-                <div class="flex items-center gap-2">
-                    <span
-                        class="px-3 py-1 text-sm font-bold rounded-xl bg-gray-200 dark:bg-gray-600/30 text-gray-700 dark:text-gray-300"
-                    >
-                        {{ shotgunGitDiffInputLines }} lines in total
-                    </span>
-                </div>
+                <label
+                    for="split-line-limit"
+                    class="block text-base font-bold text-gray-700 dark:text-gray-300"
+                    >* approx. lines per split</label
+                >
             </div>
+            <BaseButton
+                @click="handleSplitDiff"
+                :disabled="
+                    !localShotgunGitDiffInput.trim() || localSplitLineLimit <= 0
+                "
+                class="text-xs px-2 py-1 self-start"
+            >
+                <span class="text-base">{{
+                    localSplitLineLimit === shotgunGitDiffInputLines
+                        ? "proceed to apply"
+                        : "split diff"
+                }}</span>
+            </BaseButton>
         </div>
-
-        <BaseButton
-            @click="handleSplitDiff"
-            :disabled="
-                !localShotgunGitDiffInput.trim() || localSplitLineLimit <= 0
-            "
-            class="text-xs px-2 py-1 self-start"
-        >
-            <span class="text-base">{{
-                localSplitLineLimit === shotgunGitDiffInputLines
-                    ? "proceed to apply"
-                    : "split diff & proceed to apply"
-            }}</span>
-        </BaseButton>
     </div>
 </template>
 
 <script setup>
-import {
-    ref,
-    defineEmits,
-    watch,
-    computed,
-    onMounted,
-    onBeforeUnmount,
-} from "vue";
-import {
-    LogInfo as LogInfoRuntime,
-    LogError as LogErrorRuntime,
-    EventsOn,
-    EventsOff,
-} from "../../../wailsjs/runtime/runtime";
-import {
-    ExecuteGeminiRequest,
-    StopGeminiRequest,
-    CountGeminiTokens,
-    GetGeminiAPIKey,
-    SetGeminiAPIKey,
-} from "../../../wailsjs/go/main/App";
+import { ref, watch, computed, onMounted, onBeforeUnmount } from "vue";
+import { LogError as LogErrorRuntime } from "../../../wailsjs/runtime/runtime";
 import BaseButton from "../BaseButton.vue";
-import ApiKeyModal from "../ApiKeyModal.vue";
 
 const emit = defineEmits([
     "action",
@@ -302,158 +168,11 @@ const props = defineProps({
     },
 });
 
-// api key state
-const geminiApiKey = ref("");
-const showApiKeyModal = ref(false);
-
-// timer state
-const isRequestActive = ref(false);
-const startTime = ref(null);
-const elapsedTime = ref(0);
-const timerInterval = ref(null);
-const requestError = ref(null);
-
 // copy functionality state
 const copySuccess = ref(false);
 
 // clear functionality state
 const clearSuccess = ref(false);
-
-// token limit enforcement state
-const tokenCountLimit = 250000;
-const promptTokensCount = ref(0);
-const tokenCountError = ref("");
-const isPromptTooLarge = computed(
-    () => promptTokensCount.value >= tokenCountLimit
-);
-
-// dynamic color class based on token usage (similar to step2)
-const charCountColorClass = computed(() => {
-    const count = promptTokensCount.value;
-    if (count < tokenCountLimit * 0.7) {
-        return "text-green-600";
-    } else if (count < tokenCountLimit) {
-        return "text-yellow-500";
-    } else {
-        return "text-red-600";
-    }
-});
-
-// tooltip text similar to step2
-const tooltipText = computed(() => {
-    if (isTokenChecking.value) return "calculating tokens...";
-    if (tokenCountError.value) return `error: ${tokenCountError.value}`;
-    return `prompt contains ${promptTokensCount.value.toLocaleString()} gemini tokens`;
-});
-
-const isTokenChecking = ref(false);
-const isReadyToExecute = computed(() => {
-    return !isTokenChecking.value && !isPromptTooLarge.value;
-});
-
-// model selection state
-const selectedModel = ref("gemini-2.5-pro");
-
-async function handleSaveApiKey(apiKey) {
-    geminiApiKey.value = apiKey;
-    try {
-        await SetGeminiAPIKey(geminiApiKey.value);
-        LogInfoRuntime("gemini api key saved successfully");
-    } catch (error) {
-        LogErrorRuntime("failed to save gemini api key: " + error);
-    }
-    showApiKeyModal.value = false;
-}
-
-async function loadApiKey() {
-    try {
-        geminiApiKey.value = await GetGeminiAPIKey();
-    } catch (error) {
-        LogErrorRuntime("failed to load gemini api key: " + error);
-    }
-}
-
-function toggleModel() {
-    selectedModel.value =
-        selectedModel.value === "gemini-2.5-pro"
-            ? "gemini-2.5-flash"
-            : "gemini-2.5-pro";
-}
-
-const formattedTime = computed(() => {
-    const seconds = Math.floor(elapsedTime.value / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
-});
-
-async function executeRequest() {
-    if (!props.finalPrompt) {
-        LogErrorRuntime("no prompt available to execute");
-        requestError.value = "no prompt available to execute";
-        return;
-    }
-
-    isRequestActive.value = true;
-    startTime.value = Date.now();
-    elapsedTime.value = 0;
-    requestError.value = null;
-
-    timerInterval.value = setInterval(() => {
-        elapsedTime.value = Date.now() - startTime.value;
-    }, 1000);
-
-    try {
-        LogInfoRuntime("executing gemini request...");
-        // log selected model and request body for transparency
-        LogInfoRuntime(`gemini request config: model=${selectedModel.value}`);
-        const charCount = props.finalPrompt.length;
-        const bodyPreview =
-            charCount > 500
-                ? props.finalPrompt.slice(0, 500) + "..."
-                : props.finalPrompt;
-        LogInfoRuntime(`gemini request body length: ${charCount} characters`);
-        LogInfoRuntime("gemini request body preview (max 500 chars):");
-        LogInfoRuntime(bodyPreview);
-        const result = await ExecuteGeminiRequest(
-            props.finalPrompt,
-            selectedModel.value
-        );
-
-        // if we get a result, update the diff input
-        if (result) {
-            localShotgunGitDiffInput.value = result;
-            LogInfoRuntime("gemini request completed successfully");
-        }
-    } catch (error) {
-        // improve error handling to capture both string and error object responses
-        const errMsg =
-            typeof error === "string"
-                ? error
-                : error && error.message
-                  ? error.message
-                  : error?.toString() || "failed to execute gemini request";
-        requestError.value = errMsg;
-        LogErrorRuntime("gemini request failed: " + errMsg);
-    } finally {
-        isRequestActive.value = false;
-        clearInterval(timerInterval.value);
-    }
-}
-
-async function stopRequest() {
-    if (isRequestActive.value) {
-        try {
-            await StopGeminiRequest();
-            LogInfoRuntime("gemini request stopped by user");
-        } catch (error) {
-            LogErrorRuntime(
-                "failed to stop gemini request: " +
-                    (error.message || "unknown error")
-            );
-        }
-    }
-}
 
 const localShotgunGitDiffInput = ref(props.initialGitDiff);
 
@@ -462,7 +181,6 @@ const localSplitLineLimit = ref(
 );
 
 onMounted(() => {
-    loadApiKey();
     localShotgunGitDiffInput.value = props.initialGitDiff;
 
     if (props.initialSplitLineLimit > 0) {
@@ -470,24 +188,6 @@ onMounted(() => {
     } else if (localSplitLineLimit.value <= 0) {
         localSplitLineLimit.value = 500;
     }
-
-    // subscribe to gemini api events
-    EventsOn("gemini_request_start", () => {
-        LogInfoRuntime("gemini request started");
-        isRequestActive.value = true;
-    });
-
-    EventsOn("gemini_request_complete", () => {
-        LogInfoRuntime("gemini request completed");
-        isRequestActive.value = false;
-        clearInterval(timerInterval.value);
-    });
-
-    EventsOn("gemini_request_canceled", () => {
-        LogInfoRuntime("gemini request was canceled");
-        isRequestActive.value = false;
-        clearInterval(timerInterval.value);
-    });
 });
 
 const shotgunGitDiffInputLines = computed(() => {
@@ -520,30 +220,7 @@ watch(
     }
 );
 
-// watch finalPrompt to keep token count updated and enforce limit
-watch(
-    () => props.finalPrompt,
-    async (newPrompt) => {
-        if (!newPrompt) {
-            promptTokensCount.value = 0;
-            tokenCountError.value = "";
-            return;
-        }
-        try {
-            isTokenChecking.value = true;
-            const count = await CountGeminiTokens(newPrompt);
-            promptTokensCount.value = count;
-            tokenCountError.value = "";
-            isTokenChecking.value = false;
-        } catch (err) {
-            // in case of error, assume over limit and keep disabled
-            promptTokensCount.value = 0;
-            tokenCountError.value = err?.message || "token count failed";
-            isTokenChecking.value = false;
-        }
-    },
-    { immediate: true }
-);
+// token counting removed - no longer needed since we don't display it
 
 let diffInputDebounceTimer = null;
 watch(localShotgunGitDiffInput, (newVal, oldVal) => {
@@ -600,16 +277,6 @@ onBeforeUnmount(() => {
     // clear any pending debounced updates
     clearTimeout(diffInputDebounceTimer);
     clearTimeout(limitDebounceTimer);
-
-    // clear timer interval if active
-    if (timerInterval.value) {
-        clearInterval(timerInterval.value);
-    }
-
-    // unsubscribe from events
-    EventsOff("gemini_request_start");
-    EventsOff("gemini_request_complete");
-    EventsOff("gemini_request_canceled");
 
     // immediately emit the current value of localshotgungitdiffinput if it's different from the prop
     if (localShotgunGitDiffInput.value !== props.initialGitDiff) {

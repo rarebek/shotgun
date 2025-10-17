@@ -1,7 +1,7 @@
 <template>
     <div
         class="relative p-4 h-full flex flex-col"
-        style="--wails-drop-target: drop;"
+        style="--wails-drop-target: drop"
         @dragenter.prevent="onDragEnter"
         @dragover.prevent="onDragOver"
         @dragleave.prevent="onDragLeave"
@@ -10,7 +10,7 @@
         <!-- drag-drop overlay disabled (no drag-n-drop after a project is open) -->
         <div
             v-if="false"
-            class="absolute inset-4 z-10 flex flex-col justify-center items-center border-2 border-dashed rounded-lg bg-light-accent/10 dark:bg-dark-accent/20 animate-pulse-bg drag-area dragging"
+            class="absolute inset-4 z-10 flex flex-col justify-center items-center border-2 border-dashed bg-light-accent/10 dark:bg-dark-accent/20 animate-pulse-bg drag-area dragging"
         >
             <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -42,7 +42,7 @@
         <!-- drag-and-drop area for initial folder selection -->
         <div
             v-if="!projectRoot && !isLoadingContext"
-            class="flex-grow flex flex-col justify-center items-center border-2 border-dashed rounded-lg p-10 cursor-pointer drag-area"
+            class="flex-grow flex flex-col justify-center items-center border-4 border-dashed rounded-[0.4rem] p-10 cursor-pointer drag-area"
             :class="{
                 'border-light-accent dark:border-dark-accent bg-light-accent/5 dark:bg-dark-accent/10 animate-pulse-bg dragging':
                     isDragging,
@@ -52,7 +52,7 @@
         >
             <svg
                 xmlns="http://www.w3.org/2000/svg"
-                class="h-16 w-16 mb-4 text-accent-foreground"
+                class="h-16 w-16 mb-4 text-accent"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -70,14 +70,10 @@
                     d="M9 13h6m-3-3v6"
                 />
             </svg>
-            <p
-                class="text-lg font-medium text-accent-foreground mb-2"
-            >
+            <p class="text-2xl font-medium text-accent mb-2">
                 drag folder here
             </p>
-            <p class="text-sm text-accent-foreground">
-                or click to browse
-            </p>
+            <p class="text-md text-accent">or click to browse</p>
         </div>
 
         <!-- loading state: always progress bar -->
@@ -112,13 +108,16 @@
         </div>
 
         <!-- content area (textarea + copy button or error message or placeholder) -->
-        <div v-else-if="projectRoot" class="mt-0 flex-grow flex flex-col px-2 py-2 dark:bg-dark-surface border border-accent rounded-md">
+        <div
+            v-else-if="projectRoot"
+            class="mt-0 flex-grow flex flex-col px-2 py-2 dark:bg-dark-surface border-2 border-accent rounded-[0.4rem]"
+        >
             <div
                 v-if="isErrorContext"
                 class="flex-grow flex flex-col justify-center items-center"
             >
                 <div
-                    class="max-w-3xl w-full p-6 border border-red-300 dark:border-red-700 rounded-lg bg-red-50 dark:bg-red-900 dark:bg-opacity-20 shadow-sm"
+                    class="max-w-3xl w-full p-6 border border-red-300 dark:border-red-700 rounded-[0.4rem] bg-red-50 dark:bg-red-900 dark:bg-opacity-20 shadow-sm"
                 >
                     <h4
                         class="text-lg font-semibold mb-3 text-red-600 dark:text-red-400"
@@ -126,7 +125,7 @@
                         error generating context
                     </h4>
                     <pre
-                        class="text-sm whitespace-pre-wrap text-left w-full bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100 p-4 border border-red-200 dark:border-red-700 rounded-md overflow-auto max-h-[50vh]"
+                        class="text-sm whitespace-pre-wrap text-left w-full bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100 p-4 border border-red-200 dark:border-red-700 rounded-[0.4rem] overflow-auto max-h-[50vh]"
                         >{{ errorMessage }}</pre
                     >
                     <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">
@@ -137,47 +136,73 @@
             </div>
             <div
                 v-else-if="generatedContext && !isErrorContext"
-                class="flex-grow flex flex-col"
+                class="flex-grow flex flex-col items-center justify-center gap-6 max-w-[350px] mx-auto"
             >
-                <div class="flex justify-between items-center mb-2">
-                    <div>
-                        <h3
-                            class="text-md font-medium text-gray-700 dark:text-gray-300"
-                        >
-                            generated project context:
-                        </h3>
-                        <p v-if="generatedContext" class="text-xs text-gray-500 dark:text-gray-300">
-                            {{ contextStats.lines }} lines ({{ contextStats.sizeKb }} kb)
-                        </p>
+                <div
+                    class="w-full px-6 py-6 border-2 border-accent rounded-[0.4rem] bg-gray-50 dark:bg-[#3a3b60] shadow-sm mx-4 lg:mx-0"
+                >
+                    <div class="flex items-center flex-col justify-between gap-4">
+                        <div class="flex flex-col items-center justify-center gap-3 w-full">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="h-24 w-24 text-green-500"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clip-rule="evenodd"
+                                />
+                            </svg>
+                            <div class="flex flex-col text-center">
+                                <h3
+                                    class="text-3xl font-bold text-gray-800 dark:text-gray-200"
+                                >
+                                    context build successfully
+                                </h3>
+                                <span
+                                    class="text-md text-gray-500 dark:text-gray-400"
+                                >
+                                    stored in memory and ready to paste
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-4 px-4 py-4">
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="text-xs text-gray-500 dark:text-gray-400 uppercase"
+                                    >lines</span
+                                >
+                                <span
+                                    class="text-xl font-bold text-gray-800 dark:text-gray-200"
+                                    >{{
+                                        contextStats.lines.toLocaleString()
+                                    }}</span
+                                >
+                            </div>
+                            <div class="h-6 w-px bg-accent"></div>
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="text-xs text-gray-500 dark:text-gray-400 uppercase"
+                                    >size</span
+                                >
+                                <span
+                                    class="text-xl font-bold text-gray-800 dark:text-gray-200"
+                                    >{{ contextStats.sizeKb }} kb</span
+                                >
+                            </div>
+                        </div>
                     </div>
-                    <BaseButton
-                        v-if="generatedContext"
-                        @click="copyGeneratedContextToClipboard"
-                        class="px-3 py-2 bg-sidebar-primary text-sidebar-primary-foreground text-base font-semibold rounded-md hover:bg-sidebar-primary/90 focus:outline-none disabled:bg-gray-300 dark:disabled:bg-gray-700 flex items-center gap-1"
-                        :class="{
-                            'bg-green-600 dark:bg-green-700': copySuccess,
-                        }"
-                    >
-                        <template #icon>
-                            <svg v-if="!copySuccess" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                            </svg>
-                            <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                        </template>
-                        <span class="text-base">{{ copyButtonText }}</span>
-                    </BaseButton>
-                    <!-- removed change project button per request -->
                 </div>
-                <textarea
-                    :value="generatedContext"
-                    rows="10"
-                    readonly
-                    class="w-full p-2 border border-accent rounded-md shadow-sm bg-gray-50 dark:bg-dark-surface font-mono text-sm text-gray-900 dark:text-gray-100 flex-grow"
-                    placeholder="context will appear here. if empty, ensure files are selected and not all excluded."
-                    style="min-height: 150px"
-                ></textarea>
+
+                <BaseButton
+                    @click="emit('action', 'navigateToComposer')"
+                    class="w-full px-9 py-6 bg-sidebar-primary text-sidebar-primary-foreground text-xl font-semibold rounded-[0.4rem] hover:bg-sidebar-primary/90 focus:outline-none transition-all mx-4 lg:mx-0"
+                >
+                    move into composer
+                </BaseButton>
             </div>
             <p
                 v-else
@@ -191,11 +216,11 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { ClipboardSetText as WailsClipboardSetText } from "../../../wailsjs/runtime/runtime";
 import { SelectDirectory } from "../../../wailsjs/go/main/App";
 import { OnFileDrop, EventsOn } from "../../../wailsjs/runtime/runtime";
-import BaseButton from '../BaseButton.vue';
+import BaseButton from "../BaseButton.vue";
 
 const props = defineProps({
     generatedContext: {
@@ -259,7 +284,7 @@ const errorMessage = computed(() => {
 const contextStats = computed(() => {
     if (!props.generatedContext) return { lines: 0, sizeKb: 0 };
 
-    const lines = props.generatedContext.split('\n').length;
+    const lines = props.generatedContext.split("\n").length;
     const sizeKb = (props.generatedContext.length / 1024).toFixed(1);
 
     console.log(`DEBUG: computed contextStats - ${lines} lines, ${sizeKb} kb`);
@@ -336,7 +361,9 @@ async function onDrop(event) {
             const rel = f.webkitRelativePath.replace(/\\/g, "/");
             let abs = f.path.replace(/\\/g, "/");
             if (rel && abs.endsWith(rel)) {
-                const rootDir = abs.slice(0, abs.length - rel.length).replace(/[/\\]+$/, "");
+                const rootDir = abs
+                    .slice(0, abs.length - rel.length)
+                    .replace(/[/\\]+$/, "");
                 if (rootDir) {
                     emit("action", "selectDirectory", rootDir);
                     return;
@@ -350,7 +377,11 @@ async function onDrop(event) {
         const item = event.dataTransfer.items[i];
         if (item.kind === "file" && item.getAsFile) {
             const fileFromItem = item.getAsFile();
-            if (fileFromItem && fileFromItem.path && isAbsolutePath(fileFromItem.path)) {
+            if (
+                fileFromItem &&
+                fileFromItem.path &&
+                isAbsolutePath(fileFromItem.path)
+            ) {
                 const dirPath = getDirectoryFromFilePath(fileFromItem.path);
                 if (dirPath) {
                     emit("action", "selectDirectory", dirPath);
@@ -369,7 +400,10 @@ async function onDrop(event) {
             const entry = item.webkitGetAsEntry();
             if (entry) {
                 // try to use fullpath if available, otherwise fallback to name
-                const possiblePath = entry.fullPath && entry.fullPath !== "" ? entry.fullPath : entry.name;
+                const possiblePath =
+                    entry.fullPath && entry.fullPath !== ""
+                        ? entry.fullPath
+                        : entry.name;
                 if (isAbsolutePath(possiblePath)) {
                     emit("action", "selectDirectory", possiblePath);
                     return;
@@ -395,7 +429,11 @@ async function onDrop(event) {
     // handle dragging a folder object itself (no relative path info, just absolute dir)
     if (event.dataTransfer.files && event.dataTransfer.files.length === 1) {
         const only = event.dataTransfer.files[0];
-        if (only.path && isAbsolutePath(only.path) && (!only.webkitRelativePath || only.webkitRelativePath === "")) {
+        if (
+            only.path &&
+            isAbsolutePath(only.path) &&
+            (!only.webkitRelativePath || only.webkitRelativePath === "")
+        ) {
             emit("action", "selectDirectory", only.path);
             return;
         }

@@ -1,101 +1,112 @@
 :root {
-  --background: rgb(255, 255, 255);
-  --foreground: rgb(0, 0, 0);
-  --card: rgb(250, 250, 250);
-  --card-foreground: rgb(0, 0, 0);
-  --popover: rgb(250, 250, 250);
-  --popover-foreground: rgb(0, 0, 0);
-  --primary: rgb(50, 50, 50);
-  --primary-foreground: rgb(255, 255, 255);
-  --secondary: rgb(245, 245, 245);
-  --secondary-foreground: rgb(0, 0, 0);
-  --muted: rgb(240, 240, 240);
-  --muted-foreground: rgb(70, 70, 70);
-  --accent: rgb(230, 230, 230);
-  --accent-foreground: rgb(0, 0, 0);
-  --destructive: rgb(220, 38, 38);
-  --destructive-foreground: rgb(255, 255, 255);
-  --border: rgb(229, 229, 229);
-  --input: rgb(245, 245, 245);
-  --ring: rgb(50, 50, 50);
-  --chart-1: rgb(50, 50, 50);
-  --chart-2: rgb(100, 100, 100);
-  --chart-3: rgb(150, 150, 150);
-  --chart-4: rgb(200, 200, 200);
-  --chart-5: rgb(220, 220, 220);
-  --sidebar: rgb(248, 248, 248);
-  --sidebar-foreground: rgb(0, 0, 0);
-  --sidebar-primary: rgb(50, 50, 50);
-  --sidebar-primary-foreground: rgb(255, 255, 255);
-  --sidebar-accent: rgb(230, 230, 230);
-  --sidebar-accent-foreground: rgb(0, 0, 0);
-  --sidebar-border: rgb(229, 229, 229);
-  --sidebar-ring: rgb(50, 50, 50);
-  --font-sans: Montserrat, sans-serif;
-  --font-serif: Georgia, serif;
-  --font-mono: Fira Code, monospace;
-  --radius: 0.35rem;
-  --shadow-2xs: 0px 1px 0px 0px hsl(0 0% 0% / 0.03);
-  --shadow-xs: 0px 1px 0px 0px hsl(0 0% 0% / 0.04);
-  --shadow-sm: 0px 1px 0px 0px hsl(0 0% 0% / 0.06), 0px 1px 2px -1px hsl(0 0% 0% / 0.06);
-  --shadow: 0px 1px 0px 0px hsl(0 0% 0% / 0.08), 0px 1px 3px -1px hsl(0 0% 0% / 0.08);
-  --shadow-md: 0px 1px 0px 0px hsl(0 0% 0% / 0.10), 0px 2px 4px -1px hsl(0 0% 0% / 0.10);
-  --shadow-lg: 0px 1px 0px 0px hsl(0 0% 0% / 0.12), 0px 4px 6px -1px hsl(0 0% 0% / 0.12);
-  --shadow-xl: 0px 1px 0px 0px hsl(0 0% 0% / 0.14), 0px 8px 10px -1px hsl(0 0% 0% / 0.14);
-  --shadow-2xl: 0px 1px 0px 0px hsl(0 0% 0% / 0.20);
+  --background: #f5f7fa;
+  --foreground: #1a2238;
+  --card: #e3eaf2;
+  --card-foreground: #1a2238;
+  --popover: #fffbe6;
+  --popover-foreground: #1a2238;
+  --primary: #3a5ba0;
+  --primary-foreground: #fffbe6;
+  --secondary: #f7c873;
+  --secondary-foreground: #1a2238;
+  --muted: #e5e5df;
+  --muted-foreground: #3a5ba0;
+  --accent: #6ea3c1;
+  --accent-foreground: #fffbe6;
+  --destructive: #2d1e2f;
+  --destructive-foreground: #fffbe6;
+  --border: #b0b8c1;
+  --input: #6ea3c1;
+  --ring: #f7c873;
+  --chart-1: #3a5ba0;
+  --chart-2: #f7c873;
+  --chart-3: #6ea3c1;
+  --chart-4: #b0b8c1;
+  --chart-5: #2d1e2f;
+  --sidebar: #e3eaf2;
+  --sidebar-foreground: #1a2238;
+  --sidebar-primary: #3a5ba0;
+  --sidebar-primary-foreground: #fffbe6;
+  --sidebar-accent: #f7c873;
+  --sidebar-accent-foreground: #1a2238;
+  --sidebar-border: #b0b8c1;
+  --sidebar-ring: #f7c873;
+  --font-sans: Libre Baskerville, serif;
+  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --radius: 0.5rem;
+  --shadow-x: 0;
+  --shadow-y: 1px;
+  --shadow-blur: 3px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.1;
+  --shadow-color: oklch(0 0 0);
+  --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+  --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+  --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
+  --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
+  --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 2px 4px -1px hsl(0 0% 0% / 0.10);
+  --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 4px 6px -1px hsl(0 0% 0% / 0.10);
+  --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 8px 10px -1px hsl(0 0% 0% / 0.10);
+  --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 }
 
 .dark {
-  --background: rgb(26, 26, 26);
-  --foreground: rgb(217, 217, 217);
-  --card: rgb(32, 32, 32);
-  --card-foreground: rgb(217, 217, 217);
-  --popover: rgb(32, 32, 32);
-  --popover-foreground: rgb(217, 217, 217);
-  --primary: rgb(160, 160, 160);
-  --primary-foreground: rgb(26, 26, 26);
-  --secondary: rgb(48, 48, 48);
-  --secondary-foreground: rgb(217, 217, 217);
-  --muted: rgb(42, 42, 42);
-  --muted-foreground: rgb(128, 128, 128);
-  --accent: rgb(64, 64, 64);
-  --accent-foreground: rgb(217, 217, 217);
-  --destructive: rgb(224, 102, 102);
-  --destructive-foreground: rgb(255, 255, 255);
-  --border: rgb(53, 53, 53);
-  --input: rgb(48, 48, 48);
-  --ring: rgb(160, 160, 160);
-  --chart-1: rgb(160, 160, 160);
-  --chart-2: rgb(126, 156, 160);
-  --chart-3: rgb(112, 112, 112);
-  --chart-4: rgb(88, 88, 88);
-  --chart-5: rgb(64, 64, 64);
-  --sidebar: rgb(31, 31, 31);
-  --sidebar-foreground: rgb(217, 217, 217);
-  --sidebar-primary: rgb(160, 160, 160);
-  --sidebar-primary-foreground: rgb(26, 26, 26);
-  --sidebar-accent: rgb(64, 64, 64);
-  --sidebar-accent-foreground: rgb(217, 217, 217);
-  --sidebar-border: rgb(53, 53, 53);
-  --sidebar-ring: rgb(160, 160, 160);
-  --font-sans: Inter, sans-serif;
-  --font-serif: Georgia, serif;
-  --font-mono: Fira Code, monospace;
-  --radius: 0.35rem;
-  --shadow-2xs: 0px 2px 0px 0px hsl(0 0% 20% / 0.07);
-  --shadow-xs: 0px 2px 0px 0px hsl(0 0% 20% / 0.07);
-  --shadow-sm: 0px 2px 0px 0px hsl(0 0% 20% / 0.15), 0px 1px 2px -1px hsl(0 0% 20% / 0.15);
-  --shadow: 0px 2px 0px 0px hsl(0 0% 20% / 0.15), 0px 1px 2px -1px hsl(0 0% 20% / 0.15);
-  --shadow-md: 0px 2px 0px 0px hsl(0 0% 20% / 0.15), 0px 2px 4px -1px hsl(0 0% 20% / 0.15);
-  --shadow-lg: 0px 2px 0px 0px hsl(0 0% 20% / 0.15), 0px 4px 6px -1px hsl(0 0% 20% / 0.15);
-  --shadow-xl: 0px 2px 0px 0px hsl(0 0% 20% / 0.15), 0px 8px 10px -1px hsl(0 0% 20% / 0.15);
-  --shadow-2xl: 0px 2px 0px 0px hsl(0 0% 20% / 0.38);
+  --background: #181a24;
+  --foreground: #e6eaf3;
+  --card: #23243a;
+  --card-foreground: #e6eaf3;
+  --popover: #23243a;
+  --popover-foreground: #ffe066;
+  --primary: #3a5ba0;
+  --primary-foreground: #ffe066;
+  --secondary: #ffe066;
+  --secondary-foreground: #23243a;
+  --muted: #1d1e2f;
+  --muted-foreground: #7a88a1;
+  --accent: #bccdf0;
+  --accent-foreground: #181a24;
+  --destructive: #a04a6c;
+  --destructive-foreground: #ffe066;
+  --border: #2d2e3e;
+  --input: #3a5ba0;
+  --ring: #ffe066;
+  --chart-1: #3a5ba0;
+  --chart-2: #ffe066;
+  --chart-3: #6ea3c1;
+  --chart-4: #7a88a1;
+  --chart-5: #a04a6c;
+  --sidebar: #23243a;
+  --sidebar-foreground: #e6eaf3;
+  --sidebar-primary: #3a5ba0;
+  --sidebar-primary-foreground: #ffe066;
+  --sidebar-accent: #ffe066;
+  --sidebar-accent-foreground: #23243a;
+  --sidebar-border: #2d2e3e;
+  --sidebar-ring: #ffe066;
+  --font-sans: Libre Baskerville, serif;
+  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --radius: 0.5rem;
+  --shadow-x: 0;
+  --shadow-y: 1px;
+  --shadow-blur: 3px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.1;
+  --shadow-color: oklch(0 0 0);
+  --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+  --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+  --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
+  --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
+  --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 2px 4px -1px hsl(0 0% 0% / 0.10);
+  --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 4px 6px -1px hsl(0 0% 0% / 0.10);
+  --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 8px 10px -1px hsl(0 0% 0% / 0.10);
+  --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
 }
 
-/* Theme inline mapping */
-:root {
+@theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -133,10 +144,10 @@
   --font-mono: var(--font-mono);
   --font-serif: var(--font-serif);
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-sm: 0.5rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.5rem;
 
   --shadow-2xs: var(--shadow-2xs);
   --shadow-xs: var(--shadow-xs);
@@ -158,13 +169,9 @@
 html,
 body {
     font-family: "Geist", sans-serif !important;
-    -ms-overflow-style: none !important;
-    scrollbar-width: none !important;
 }
 
 * {
-    -ms-overflow-style: none !important;
-    scrollbar-width: none !important;
     font-weight: 650 !important;
 }
 
@@ -267,17 +274,80 @@ ms-code-block *:not(button *) {
     font-size: 16px !important;
 }
 
-/* hide all scrollbars from all elements - universal userstyle */
-/* for webkit-based browsers (chrome, safari, new opera, etc.) */
-*::-webkit-scrollbar {
-    display: none !important;
-    width: 0 !important;
-    /* for some versions */
-    height: 0 !important;
-    /* for some versions */
-}
+/* custom scrollbar base styles moved to end of file */
 
 /* force font settings on all vue components */
 .v-application *:not(i):not(.fa):not(.material-icons) {
     font-family: "Geist", sans-serif !important;
 }
+
+/* hide scrollbar from file tree container - all overflow elements */
+div[class*="overflow-auto"]::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+div[class*="overflow-auto"] {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+/* global hide all scrollbars */
+*::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+* {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+/* prevent overscroll/bounce on all scrollable containers */
+*::-webkit-scrollbar,
+div[class*="overflow-auto"],
+div[class*="overflow-y-auto"],
+div[class*="overflow-x-auto"] {
+    overscroll-behavior: contain;
+}
+
+/* specifically target left sidebar horizontal scroll */
+div[class*="overflow-auto"] {
+    overscroll-behavior: contain;
+    touch-action: pan-x pan-y pinch-zoom;
+}
+
+/* apply to html and body to prevent page-level overscroll */
+html,
+body {
+    overscroll-behavior: contain;
+    overflow-y: hidden;
+    overflow-x: hidden;
+    touch-action: none;
+}
+
+/* file tree hover colors - light theme */
+html:not(.dark) .node-item:hover {
+    background-color: #c5d8e8 !important;
+    color: #0a1419 !important;
+}
+
+/* file tree hover colors - dark theme */
+html.dark .node-item:hover {
+    background-color: #3d5166 !important;
+    color: #f5f7fa !important;
+}
+
+/* tree lines styling for light and dark themes */
+html:not(.dark) .tree-lines {
+    border-left: 1px solid var(--border) !important;
+    opacity: 0.6 !important;
+}
+
+html.dark .tree-lines {
+    border-left: 1px solid #4a5f7f !important;
+    opacity: 0.7 !important;
+}
+

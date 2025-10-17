@@ -1,6 +1,6 @@
 <template>
-    <div class="bg-card top-0 z-10 relative">
-        <div class="flex items-center pr-5 py-3 pt-4">
+    <div class="bg-white dark:bg-card top-0 z-10 relative">
+        <div class="flex items-center py-3 pt-4 px-4">
             <div class="flex items-center">
                 <ol class="flex space-x-2 items-center">
                     <li
@@ -15,17 +15,9 @@
                             :class="[
                                 currentStep === step.id
                                     ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                                    : ''
+                                    : 'text-foreground hover:bg-muted hover:text-foreground'
                             ]"
                         >
-                            <span class="flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold"
-                                  :class="[
-                                      currentStep === step.id
-                                          ? 'bg-accent text-accent-foreground group-hover:text-sidebar-primary-foreground group-hover:bg-sidebar-primary'
-                                          : 'bg-sidebar-primary text-sidebar-primary-foreground'
-                                  ]">
-                                {{ step.id }}
-                            </span>
                             <span class="text-base">{{ step.title }}</span>
                         </BaseButton>
                         <div
@@ -43,7 +35,7 @@
     </div>
 </template>
 <script setup>
-import { defineProps, defineEmits } from "vue";
+// no imports needed for defineProps and defineEmits in script setup
 import BaseButton from "./BaseButton.vue";
 
 const props = defineProps({

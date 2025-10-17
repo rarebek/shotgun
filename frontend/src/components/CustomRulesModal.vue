@@ -5,7 +5,7 @@
         @click.self="handleCancel"
     >
         <div
-            class="relative mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-card border-border"
+            class="relative mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-[0.4rem] bg-card border-border"
         >
             <div class="mt-3 text-center">
                 <h3
@@ -26,16 +26,24 @@
                     >
                         {{ descriptionText }}
                     </p>
+                    <p
+                        v-if="saveError"
+                        class="text-sm text-red-500 mt-2 text-left"
+                    >
+                        error: {{ saveError }}
+                    </p>
                 </div>
                 <div class="items-center px-4 py-3">
                     <BaseButton
                         @click="handleSave"
+                        :disabled="isSaving"
                         class="px-4 py-2 mr-2 bg-sidebar-primary text-sidebar-primary-foreground text-base font-semibold rounded-md hover:bg-sidebar-primary/90 focus:outline-none"
                     >
-                        <span class="text-base"> save </span>
+                        <span class="text-base"> {{ isSaving ? 'saving...' : 'save' }} </span>
                     </BaseButton>
                     <BaseButton
                         @click="handleCancel"
+                        :disabled="isSaving"
                         class="px-4 py-2"
                     >
                         <span class="text-base"> cancel </span>
@@ -47,7 +55,7 @@
 </template>
 
 <script setup>
-import { ref, watch, defineProps, defineEmits, computed } from "vue";
+import { ref, watch, computed } from "vue";
 import BaseButton from './BaseButton.vue';
 
 const props = defineProps({
@@ -70,9 +78,11 @@ const props = defineProps({
     },
 });
 
-const emit = defineEmits(["save", "cancel"]);
+const emit = defineEmits(["save", "cancel", "save-complete", "save-error"]);
 
 const editableRules = ref("");
+const isSaving = ref(false);
+const saveError = ref("");
 
 const descriptionText = computed(() => {
     if (props.ruleType === "prompt") {
@@ -86,25 +96,54 @@ watch(
     () => props.initialRules,
     (newVal) => {
         editableRules.value = newVal;
+        saveError.value = ""; // clear error when rules change
     },
     { immediate: true }
 );
 
 watch(
     () => props.isVisible,
-    (newVal) => {
+    (newVal, oldVal) => {
+        console.log(`customrulesmodal: isVisible changed from ${oldVal} to ${newVal}`);
+        console.log(`customrulesmodal: current isSaving state: ${isSaving.value}`);
+
         if (newVal) {
             // when modal becomes visible, ensure textarea reflects the latest initialrules
+            console.log("customrulesmodal: modal opening, resetting state");
             editableRules.value = props.initialRules;
+            saveError.value = ""; // clear error when modal opens
+            isSaving.value = false; // reset saving state
+            console.log(`customrulesmodal: after reset, isSaving: ${isSaving.value}`);
+        } else {
+            // when modal closes, reset saving state for next time
+            console.log("customrulesmodal: modal closing, resetting state");
+            isSaving.value = false;
+            saveError.value = "";
+            console.log(`customrulesmodal: after reset on close, isSaving: ${isSaving.value}`);
         }
     }
 );
 
 function handleSave() {
+    console.log("customrulesmodal: handlesave called with rules length:", editableRules.value.length);
+    isSaving.value = true;
+    saveError.value = "";
     emit("save", editableRules.value);
 }
 
+// expose method to parent to reset saving state
+defineExpose({
+    resetSavingState: (success = true, errorMessage = "") => {
+        console.log("customrulesmodal: resetsavingstate called, success:", success);
+        isSaving.value = false;
+        if (!success) {
+            saveError.value = errorMessage;
+        }
+    }
+});
+
 function handleCancel() {
+    console.log("customrulesmodal: handlecancel called");
     emit("cancel");
 }
 </script>

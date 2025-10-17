@@ -3,6 +3,8 @@
 import {main} from '../models';
 import {context} from '../models';
 
+export function CalculatePromptCost(arg1:number,arg2:string,arg3:number):Promise<number>;
+
 export function CountGeminiTokens(arg1:string):Promise<number>;
 
 export function ExecuteGeminiRequest(arg1:string,arg2:string):Promise<string>;

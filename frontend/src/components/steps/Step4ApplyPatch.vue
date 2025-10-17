@@ -128,18 +128,19 @@
         </div>
 
         <div v-else class="flex-grow flex justify-center items-center">
-            <p class="text-gray-500 dark:text-gray-300">
+            <h1 class="text-2xl text-gray-500 dark:text-gray-300">
                 no split diffs to display. go to step 3 to split a diff.
-            </p>
+            </h1>
         </div>
 
     </div>
 </template>
 
 <script setup>
-const finishButtonText = ref("finish");
-import { ref, defineProps, watch } from "vue";
+import { ref, watch } from "vue";
 import BaseButton from "../BaseButton.vue";
+
+const finishButtonText = ref("finish");
 // import { clipboardsettext as wailsclipboardsettext } from '../../../wailsjs/runtime/runtime'; // if needed for specific platforms
 
 const props = defineProps({

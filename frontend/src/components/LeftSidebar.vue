@@ -1,6 +1,7 @@
 <template>
     <div>
         <CustomRulesModal
+            ref="customIgnoreRulesModalRef"
             :is-visible="isCustomRulesModalVisible"
             :initial-rules="currentCustomRulesForModal"
             title="edit custom ignore rules"
@@ -9,6 +10,7 @@
             @cancel="handleCancelCustomRules"
         />
         <CustomRulesModal
+            ref="promptRulesModalRef"
             :is-visible="isPromptRulesModalVisible"
             :initial-rules="currentPromptRulesForModal_prompt"
             title="edit custom prompt rules"
@@ -20,7 +22,7 @@
             class="sidebar-container flex item-top h-full"
         >
             <div
-                class="sidebar-content w-64 lg:w-[450px] bg-sidebar p-4 border-r border-sidebar-border flex flex-col flex-shrink-0 h-full max-[900px]:w-[415px]"
+                class="sidebar-content w-64 lg:w-[450px] bg-sidebar p-4 border-sidebar-border flex flex-col flex-shrink-0 h-full max-[900px]:w-[415px]"
             >
                 <!-- project selection and file tree -->
                 <div class="flex flex-col flex-grow h-full">
@@ -30,13 +32,11 @@
                         class="mb-4 flex items-center gap-4 justify-between"
                     >
                         <BaseButton
-                            @click="handleReset"
-                            :title="'reset application'"
-                            variant="danger"
-                            class="aspect-square text-base"
+                            @click="openPromptRulesModal_prompt"
+                            title="edit custom prompt rules"
+                            class="px-2 py-1"
                         >
-                            <!-- simple refresh icon -->
-                            <span class="text-base"> reset </span>
+                            <span class="text-base"> rules </span>
                         </BaseButton>
                         <BaseButton
                             @click="$emit('select-directory')"
@@ -45,16 +45,18 @@
                             <span class="text-base"> open another project </span>
                         </BaseButton>
                         <BaseButton
-                            @click="openPromptRulesModal_prompt"
-                            title="edit custom prompt rules"
-                            class="px-2 py-1"
+                            @click="handleReset"
+                            :title="'reset application'"
+                            variant="danger"
+                            class="aspect-square text-base"
                         >
-                            <span class="text-base"> rules </span>
+                            <!-- simple refresh icon -->
+                            <span class="text-base"> reset </span>
                         </BaseButton>
                     </div>
 
                     <div
-                        class="flex flex-row justify-between items-center mb-2"
+                        class="flex flex-row justify-between items-center mb-6"
                     >
                             <BaseButton
                                 @click="selectAllFiles"
@@ -86,19 +88,29 @@
 
                     <!-- file tree -->
                     <div
-                        class="border border-border rounded min-h-0 bg-card text-sm overflow-auto flex-grow h-0"
+                        class="rounded-[0.4rem] min-h-0 bg-white dark:bg-[#3a3b60] text-sm overflow-auto flex-grow h-0 border-2 border-accent"
                     >
-                        <FileTree
-                            v-if="fileTreeNodes && fileTreeNodes.length > 0"
+                        <!-- use optimized file tree for better performance with large codebases -->
+                        <FileTreeOptimized
+                            v-if="useOptimizedFileTree && fileTreeNodes && fileTreeNodes.length > 0"
                             :nodes="fileTreeNodes"
+                            :project-root="projectRoot"
                             :loading-error="loadingError"
-                            @toggle-exclude="
-                                (path) => $emit('toggle-exclude', path)
-                            "
+                            :use-gitignore="useGitignore"
+                            @toggle-exclude="handleToggleExclude"
                             @add-log="(log) => $emit('add-log', log)"
                         />
-                        <div v-else-if="!projectRoot" class="p-3">
-                            select a project folder to view files.
+                        <!-- fallback to original file tree if needed -->
+                        <FileTree
+                            v-else-if="!useOptimizedFileTree && fileTreeNodes && fileTreeNodes.length > 0"
+                            :nodes="fileTreeNodes"
+                            :loading-error="loadingError"
+                            :use-gitignore="useGitignore"
+                            @toggle-exclude="handleToggleExclude"
+                            @add-log="(log) => $emit('add-log', log)"
+                        />
+                        <div v-else-if="!projectRoot" class="flex items-center justify-center h-full p-3">
+                            <span class="text-lg font-semibold">select a project folder to view files.</span>
                         </div>
                         <div
                             v-else-if="loadingError"
@@ -109,7 +121,7 @@
                         <div v-else class="p-3">loading files...</div>
                     </div>
 
-                    <div class="mt-2 flex justify-around gap-4">
+                    <!-- <div class="mt-2 flex justify-around gap-4">
                         <label class="flex items-center text-sm">
                             <input
                                 type="checkbox"
@@ -122,10 +134,10 @@
                                 "
                                 class="form-checkbox h-4 w-4 text-sidebar-primary rounded border-border focus:ring-sidebar-primary mr-2"
                             />
-                            <span class="text-base"> use .gitignore rules </span>
-                        </label>
-                        <div class="flex items-center gap-2">
-                            <label class="flex items-center text-sm">
+                            <span class="text-base"> .gitignore rules </span>
+                        </label> -->
+                        <!-- <div class="flex items-center gap-2"> -->
+                            <!-- <label class="flex items-center text-sm">
                                 <input
                                     type="checkbox"
                                     :checked="useCustomIgnore"
@@ -137,18 +149,18 @@
                                     "
                                     class="form-checkbox h-4 w-4 text-sidebar-primary rounded border-border focus:ring-sidebar-primary mr-2"
                                 />
-                                <span class="text-base"> use custom ignore </span>
-                            </label>
-                            <BaseButton
+                                <span class="text-base"> custom ignore </span>
+                            </label> -->
+                            <!-- <BaseButton
                                 @click="openCustomRulesModal"
                                 title="edit custom ignore rules"
                                 class="px-2 py-1 text-xs"
                                 variant="secondary"
                             >
                                 <span class="text-base"> edit </span>
-                            </BaseButton>
-                        </div>
-                    </div>
+                            </BaseButton> -->
+                        <!-- </div> -->
+                    <!-- </div> -->
                 </div>
             </div>
 
@@ -157,10 +169,18 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, ref } from "vue";
+import { ref } from "vue";
 import FileTree from "./FileTree.vue"; // import the existing filetree
+import FileTreeOptimized from "./FileTreeOptimized.vue"; // import optimized file tree for better performance
 import CustomRulesModal from "./CustomRulesModal.vue";
 import BaseButton from "./BaseButton.vue";
+
+// flag to switch between normal and optimized file tree
+const useOptimizedFileTree = ref(true);
+
+// refs for modal components
+const customIgnoreRulesModalRef = ref(null);
+const promptRulesModalRef = ref(null);
 import {
     GetCustomIgnoreRules,
     SetCustomIgnoreRules,
@@ -233,11 +253,19 @@ async function openCustomRulesModal() {
 }
 
 async function handleSaveCustomRules(newRules) {
-    console.log("saving custom rules, length:", newRules.length);
+    console.log("leftsidebar: handlesavecustomrules called, rules length:", newRules.length);
     try {
+        console.log("leftsidebar: calling setcustomignorerules...");
         await SetCustomIgnoreRules(newRules);
-        console.log("custom rules saved successfully");
+        console.log("leftsidebar: setcustomignorerules completed successfully");
+
+        // use nextTick to ensure modal state updates before closing
+        console.log("leftsidebar: attempting to reset modal state");
+        await new Promise(resolve => setTimeout(resolve, 0)); // let vue process any pending updates
+
+        console.log("leftsidebar: closing modal");
         isCustomRulesModalVisible.value = false;
+
         LogInfoRuntime(
             "custom ignore rules saved successfully via leftsidebar."
         );
@@ -247,14 +275,24 @@ async function handleSaveCustomRules(newRules) {
         });
         emit("custom-rules-updated"); // notify mainlayout to refresh
     } catch (error) {
-        console.error("error saving custom ignore rules:", error);
-        LogErrorRuntime(`error saving custom rules: ${error.message || error}`);
+        console.error("leftsidebar: error saving custom ignore rules:", error);
+        console.error("leftsidebar: error type:", typeof error);
+        console.error("leftsidebar: error details:", JSON.stringify(error, null, 2));
+
+        const errorMsg = error.message || String(error);
+
+        // reset modal saving state with error
+        if (customIgnoreRulesModalRef.value) {
+            customIgnoreRulesModalRef.value.resetSavingState(false, errorMsg);
+        }
+
+        LogErrorRuntime(`error saving custom rules: ${errorMsg}`);
         emit("add-log", {
-            message: `failed to save custom rules: ${error.message || error}`,
+            message: `failed to save custom rules: ${errorMsg}`,
             type: "error",
         });
-        // show error but still close modal to prevent stuck state
-        isCustomRulesModalVisible.value = false;
+        // keep modal open on error so user can see what happened and try again
+        alert(`failed to save custom rules: ${errorMsg}`);
     }
 }
 
@@ -281,15 +319,32 @@ async function openPromptRulesModal_prompt() {
 }
 
 async function handleSavePromptRules_prompt(newRules) {
+    console.log("leftsidebar: handlesavepromptrules called, rules length:", newRules.length);
     try {
+        console.log("leftsidebar: calling setcustompromptrules...");
         await SetCustomPromptRules(newRules);
+        console.log("leftsidebar: setcustompromptrules completed successfully");
+
+        // reset modal saving state and close
+        if (promptRulesModalRef.value) {
+            promptRulesModalRef.value.resetSavingState(true);
+        }
         isPromptRulesModalVisible.value = false;
+
         LogInfoRuntime("custom prompt rules saved successfully.");
         emit("update:rulesContent", newRules);
     } catch (error) {
-        console.error("error saving prompt rules:", error);
-        LogErrorRuntime(`error saving prompt rules: ${error.message || error}`);
-        // optionally, emit a log to the user
+        console.error("leftsidebar: error saving prompt rules:", error);
+
+        const errorMsg = error.message || String(error);
+
+        // reset modal saving state with error
+        if (promptRulesModalRef.value) {
+            promptRulesModalRef.value.resetSavingState(false, errorMsg);
+        }
+
+        LogErrorRuntime(`error saving prompt rules: ${errorMsg}`);
+        alert(`failed to save prompt rules: ${errorMsg}`);
     }
 }
 

@@ -27,7 +27,7 @@
 </template>
 
 <script setup>
-import { defineProps, ref, watch, nextTick } from "vue";
+import { ref, watch, nextTick } from "vue";
 
 const props = defineProps({
     logMessages: {

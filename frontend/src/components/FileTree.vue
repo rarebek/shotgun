@@ -1,7 +1,7 @@
 <template>
-    <ul class="file-tree overflow-y-hidden">
+    <ul class="file-tree overflow-y-auto">
         <li
-            v-for="node in nodes"
+            v-for="node in nodes.filter(n => !(useGitignore && n.isGitignored))"
             :key="node.path"
             :class="{ 'excluded-node': node.excluded }"
         >
@@ -11,6 +11,12 @@
                 style="position: relative; cursor: pointer"
                 @click="handleAreaClick($event, node)"
             >
+                <template v-for="lineDepth in depth" :key="`line-${lineDepth}`">
+                    <div
+                        class="tree-lines"
+                        :style="{ 'left': (lineDepth - 1) * 20 + 10 + 'px' }"
+                    ></div>
+                </template>
                 <!-- <span class="arrow-indicator pl-1">
                     <span v-if="node.isDir && !node.expanded" @click.stop="toggleExpand(node)">
                         <div class="codicon codicon-chevron-down codicon-bold codicon-custom"></div>
@@ -61,6 +67,7 @@
                 :nodes="node.children"
                 :project-root="projectRoot"
                 :depth="depth + 1"
+                :use-gitignore="useGitignore"
                 @toggle-exclude="emitToggleExclude"
             />
         </li>
@@ -68,7 +75,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits } from "vue";
+// no imports needed for defineProps and defineEmits in script setup
 
 const props = defineProps({
     nodes: Array,
@@ -82,6 +89,10 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    useGitignore: {
+        type: Boolean,
+        default: true,
+    },
 });
 
 const emit = defineEmits(["toggle-exclude"]);
@@ -89,6 +100,7 @@ const emit = defineEmits(["toggle-exclude"]);
 function toggleExpand(node) {
     if (node.isDir) {
         node.expanded = !node.expanded;
+        console.log(`DEBUG: toggled ${node.name} expanded to ${node.expanded}, children: ${node.children?.length || 0}`);
     }
 }
 
@@ -151,10 +163,10 @@ function isEffectivelyExcludedByParent(node) {
     display: flex;
     align-items: center;
     cursor: default;
-    transition: background-color 0.15s ease;
+    transition: background-color 0.15s ease, color 0.15s ease;
 }
-.node-item:hover {
-    background-color: var(--accent);
+.node-item:last-child {
+    border-bottom: none;
 }
 .toggler {
     cursor: pointer;
@@ -182,6 +194,7 @@ function isEffectivelyExcludedByParent(node) {
     cursor: pointer;
     width: 20px;
     height: 20px;
+    accent-color: var(--accent);
 }
 .excluded-node > .node-item > span:not(.toggler, .file-icon, .arrow-indicator, .codicon) {
     color: var(--muted-foreground);
@@ -191,6 +204,11 @@ function isEffectivelyExcludedByParent(node) {
 }
 .name-label {
     margin-left: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-shrink: 1;
+    min-width: 0;
 }
 .arrow-indicator {
     display: flex;
@@ -223,5 +241,14 @@ function isEffectivelyExcludedByParent(node) {
     width: 22px;
     height: 100%;
     text-decoration: none!important;
+}
+
+.tree-lines {
+    position: absolute;
+    top: 0;
+    width: 1px;
+    height: 100%;
+    border-left: 1px solid var(--border);
+    opacity: 0.5;
 }
 </style>
