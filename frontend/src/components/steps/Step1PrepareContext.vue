@@ -136,16 +136,14 @@
             </div>
             <div
                 v-else-if="generatedContext && !isErrorContext"
-                class="flex-grow flex flex-col items-center justify-center gap-6 max-w-[350px] mx-auto bg-white dark:bg-[#3a3b60]"
+                class="flex-grow flex flex-col items-center justify-center bg-white dark:bg-[#3a3b60]"
             >
-                <div
-                    class="w-full px-6 py-6 border-2 border-accent rounded-[0.4rem] bg-gray-50 dark:bg-[#3a3b60] shadow-sm mx-4 lg:mx-0"
-                >
-                    <div class="flex items-center flex-col justify-between gap-4">
-                        <div class="flex flex-col items-center justify-center gap-3 w-full">
+                <div class="text-center max-w-md mx-auto">
+                    <div class="flex flex-col items-center gap-6">
+                        <div class="flex flex-col items-center gap-3">
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
-                                class="h-24 w-24 text-green-500"
+                                class="h-16 w-16 text-green-500"
                                 viewBox="0 0 24 24"
                                 fill="currentColor"
                             >
@@ -156,53 +154,44 @@
                                 />
                             </svg>
                             <div class="flex flex-col text-center">
-                                <h3
-                                    class="text-3xl font-bold text-gray-800 dark:text-gray-200"
-                                >
-                                    context build successfully
+                                <h3 class="text-2xl font-semibold text-gray-800 dark:text-gray-200">
+                                    context generated
                                 </h3>
-                                <span
-                                    class="text-md text-gray-500 dark:text-gray-400"
-                                >
-                                    stored in memory and ready to paste
-                                </span>
+                            </div>
+
+                            <div class="flex items-center gap-2 lg:gap-4 px-6">
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="text-xs text-gray-500 dark:text-gray-400 uppercase"
+                                        >lines</span
+                                    >
+                                    <span
+                                        class="text-xl font-bold text-gray-800 dark:text-gray-200"
+                                        >{{ contextStats.lines.toLocaleString() }}</span
+                                    >
+                                </div>
+                                <div class="hidden lg:block h-6 w-px bg-accent"></div>
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="text-xs text-gray-500 dark:text-gray-400 uppercase"
+                                        >size</span
+                                    >
+                                    <span
+                                        class="text-xl font-bold text-gray-800 dark:text-gray-200"
+                                        >{{ contextStats.sizeKb }} kb</span
+                                    >
+                                </div>
                             </div>
                         </div>
 
-                        <div class="flex items-center gap-4 px-4 py-4">
-                            <div class="flex items-center gap-2">
-                                <span
-                                    class="text-xs text-gray-500 dark:text-gray-400 uppercase"
-                                    >lines</span
-                                >
-                                <span
-                                    class="text-xl font-bold text-gray-800 dark:text-gray-200"
-                                    >{{
-                                        contextStats.lines.toLocaleString()
-                                    }}</span
-                                >
-                            </div>
-                            <div class="h-6 w-px bg-accent"></div>
-                            <div class="flex items-center gap-2">
-                                <span
-                                    class="text-xs text-gray-500 dark:text-gray-400 uppercase"
-                                    >size</span
-                                >
-                                <span
-                                    class="text-xl font-bold text-gray-800 dark:text-gray-200"
-                                    >{{ contextStats.sizeKb }} kb</span
-                                >
-                            </div>
-                        </div>
+                        <BaseButton
+                            @click="emit('action', 'navigateToComposer')"
+                            class="w-full max-w-md px-12 py-6 bg-sidebar-primary text-sidebar-primary-foreground text-xl font-bold rounded-[0.4rem] hover:bg-sidebar-primary/90 focus:outline-none transition-all"
+                        >
+                            continue to composer
+                        </BaseButton>
                     </div>
                 </div>
-
-                <BaseButton
-                    @click="emit('action', 'navigateToComposer')"
-                    class="w-full px-9 py-6 bg-sidebar-primary text-sidebar-primary-foreground text-xl font-semibold rounded-[0.4rem] hover:bg-sidebar-primary/90 focus:outline-none transition-all mx-4 lg:mx-0"
-                >
-                    move into composer
-                </BaseButton>
             </div>
             <p
                 v-else

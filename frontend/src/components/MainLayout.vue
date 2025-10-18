@@ -144,6 +144,21 @@ function registerShotgunContextListeners() {
                 if (centralPanelRef.value?.updateStep2ShotgunContext) {
                     centralPanelRef.value.updateStep2ShotgunContext(output);
                 }
+
+                // automatically navigate to step 2 (compose prompt) after context generation completes
+                if (output && output.length > 0 && currentStep.value === 1 && !isNavigating.value) {
+                    const step2 = steps.value.find((s) => s.id === 2);
+                    if (step2) {
+                        addLog("context generation complete, automatically navigating to compose prompt step", "info", "bottom");
+                        // delay navigation slightly to ensure all state updates are processed
+                        setTimeout(() => {
+                            if (currentStep.value === 1 && !isNavigating.value) {
+                                navigateToStep(2);
+                            }
+                        }, 100);
+                    }
+                }
+
                 checkAndProcessPendingFileTreeReload();
             }
         );
@@ -959,6 +974,20 @@ async function handleStepAction(actionName, payload) {
             if (currentStep.value === 1 && currentStepObj && !currentStepObj.completed) {
                 currentStepObj.completed = true;
                 currentStepObj.everCompleted = true;
+            }
+
+            // automatically navigate to step 2 (compose prompt) after local context generation completes
+            if (payload && payload.length > 0 && currentStep.value === 1 && !isNavigating.value) {
+                const step2 = steps.value.find((s) => s.id === 2);
+                if (step2) {
+                    addLog("local context generation complete, automatically navigating to compose prompt step", "info", "bottom");
+                    // delay navigation slightly to ensure all state updates are processed
+                    setTimeout(() => {
+                        if (currentStep.value === 1 && !isNavigating.value) {
+                            navigateToStep(2);
+                        }
+                    }, 100);
+                }
             }
             break;
         case "contextProgressLocal":

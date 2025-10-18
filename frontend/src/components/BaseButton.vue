@@ -7,7 +7,6 @@
             '[&_svg]:pointer-events-none [&_svg:not([class*=\'size-\'])]:size-4 [&_svg]:shrink-0',
             'outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
             'border-2',
-            'shadow-sm',
             variantClasses,
             sizeClasses,
         ]"
@@ -53,7 +52,7 @@ const variantClasses = computed(() => {
         case "warning":
             return "border-amber-500/10 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-800/50 focus-visible:ring-amber-500";
         default:
-            return "border-border bg-background hover:bg-accent hover:border-primary/50 text-foreground dark:hover:text-sidebar-foreground focus-visible:ring-primary";
+            return "border-border bg-background hover:bg-accent hover:border-primary text-foreground dark:hover:text-sidebar-foreground focus-visible:ring-primary";
     }
 });
 

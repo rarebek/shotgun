@@ -13,7 +13,7 @@
                 v-model="localShotgunGitDiffInput"
                 rows="80"
                 spellcheck="false"
-                class="w-full p-2 border-2 border-accent rounded-[0.4rem] shadow-sm focus:ring-light-accent dark:focus:ring-dark-accent focus:border-light-accent dark:focus:border-dark-accent text-sm font-mono bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100 resize-none"
+                class="w-full p-2 border-2 border-accent rounded-[0.4rem] shadow-sm focus:ring-light-accent dark:focus:ring-dark-accent focus:border-light-accent dark:focus:border-dark-accent text-lg font-mono bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100 resize-none"
                 placeholder="paste the git diff output here, e.g., diff --git a/file.txt b/file.txt..."
             ></textarea>
         </div>
@@ -25,7 +25,7 @@
                 <br />
                 the exact number of lines per split is not guaranteed, but the diff will be split into as many parts as possible.
             </p>
-            <div class="flex items-center space-x-2 mb-3">
+            <div class="flex items-center space-x-2">
                 <input
                     type="number"
                     id="split-line-limit"
@@ -34,25 +34,20 @@
                     step="50"
                     class="w-1/8 p-2 border-2 border-accent rounded-[0.4rem] shadow-sm focus:ring-light-accent dark:focus:ring-dark-accent focus:border-light-accent dark:focus:border-dark-accent text-sm bg-white dark:bg-dark-surface text-gray-900 dark:text-gray-100"
                 />
-                <label
-                    for="split-line-limit"
-                    class="block text-base font-bold text-gray-700 dark:text-gray-300"
-                    >* approx. lines per split</label
+                <BaseButton
+                    @click="handleSplitDiff"
+                    :disabled="
+                        !localShotgunGitDiffInput.trim() || localSplitLineLimit <= 0
+                    "
+                    class="text-xs px-2 py-1"
                 >
+                    <span class="text-base">{{
+                        localSplitLineLimit === shotgunGitDiffInputLines
+                            ? "proceed to apply"
+                            : "split diff"
+                    }}</span>
+                </BaseButton>
             </div>
-            <BaseButton
-                @click="handleSplitDiff"
-                :disabled="
-                    !localShotgunGitDiffInput.trim() || localSplitLineLimit <= 0
-                "
-                class="text-xs px-2 py-1 self-start"
-            >
-                <span class="text-base">{{
-                    localSplitLineLimit === shotgunGitDiffInputLines
-                        ? "proceed to apply"
-                        : "split diff"
-                }}</span>
-            </BaseButton>
         </div>
     </div>
 </template>
