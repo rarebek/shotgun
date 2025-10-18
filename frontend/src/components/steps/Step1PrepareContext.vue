@@ -42,7 +42,7 @@
         <!-- drag-and-drop area for initial folder selection -->
         <div
             v-if="!projectRoot && !isLoadingContext"
-            class="flex-grow flex flex-col justify-center items-center border-4 border-dashed rounded-[0.4rem] p-10 cursor-pointer drag-area bg-[#3a3b60]"
+            class="flex-grow flex flex-col justify-center items-center border-4 border-dashed rounded-[0.4rem] p-10 cursor-pointer drag-area bg-white dark:bg-[#3a3b60]"
             :class="{
                 'border-light-accent dark:border-dark-accent bg-light-accent/50 dark:bg-[#3a3b60] animate-pulse-bg dragging':
                     isDragging,
@@ -52,7 +52,7 @@
         >
             <svg
                 xmlns="http://www.w3.org/2000/svg"
-                class="h-16 w-16 mb-4 text-accent"
+                class="h-16 w-16 mb-4 text-sidebar-foreground"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -70,10 +70,10 @@
                     d="M9 13h6m-3-3v6"
                 />
             </svg>
-            <p class="text-2xl font-medium text-accent mb-2">
+            <p class="text-2xl font-medium text-sidebar-foreground mb-2">
                 drag folder here
             </p>
-            <p class="text-md text-accent">or click to browse</p>
+            <p class="text-md text-sidebar-foreground">or click to browse</p>
         </div>
 
         <!-- loading state: always progress bar -->
