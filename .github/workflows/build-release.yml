@@ -1,0 +1,215 @@
+name: build and release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'release version (e.g., v1.0.0)'
+        required: false
+        type: string
+
+env:
+  GO_VERSION: '1.24.x'
+  NODE_VERSION: '20.x'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            arch: amd64
+          - os: windows-latest
+            platform: windows
+            arch: amd64
+          - os: macos-latest
+            platform: darwin
+            arch: universal
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+
+      - name: setup go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: install wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: install linux dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+
+      - name: install frontend dependencies
+        run: |
+          cd frontend
+          pnpm install
+
+      - name: build application
+        run: wails build -clean -platform ${{ matrix.platform }}/${{ matrix.arch }}
+
+      - name: prepare artifacts (linux)
+        if: matrix.platform == 'linux'
+        run: |
+          mkdir -p dist-artifacts
+          cp build/bin/shotgun dist-artifacts/shotgun-linux-amd64
+          chmod +x dist-artifacts/shotgun-linux-amd64
+
+      - name: prepare artifacts (windows)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist-artifacts
+          Copy-Item build\bin\shotgun.exe dist-artifacts\shotgun-windows-amd64.exe
+
+      - name: prepare artifacts (macos)
+        if: matrix.platform == 'darwin'
+        run: |
+          mkdir -p dist-artifacts
+          cp -r build/bin/shotgun.app dist-artifacts/
+          cd dist-artifacts
+          zip -r shotgun-macos-universal.zip shotgun.app
+
+      - name: upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: shotgun-${{ matrix.platform }}-${{ matrix.arch }}
+          path: dist-artifacts/*
+          retention-days: 90
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: prepare release assets
+        run: |
+          mkdir -p release-assets
+
+          # linux
+          if [ -f artifacts/shotgun-linux-amd64/shotgun-linux-amd64 ]; then
+            cp artifacts/shotgun-linux-amd64/shotgun-linux-amd64 release-assets/
+          fi
+
+          # windows
+          if [ -f artifacts/shotgun-windows-amd64/shotgun-windows-amd64.exe ]; then
+            cp artifacts/shotgun-windows-amd64/shotgun-windows-amd64.exe release-assets/
+          fi
+
+          # macos
+          if [ -f artifacts/shotgun-darwin-universal/shotgun-macos-universal.zip ]; then
+            cp artifacts/shotgun-darwin-universal/shotgun-macos-universal.zip release-assets/
+          fi
+
+          ls -lah release-assets/
+
+      - name: determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          elif [[ $GITHUB_REF == refs/tags/* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "version=v0.0.0-dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: generate changelog
+        id: changelog
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            previous_tag=$(git describe --abbrev=0 --tags $(git rev-list --tags --skip=1 --max-count=1) 2>/dev/null || echo "")
+            if [ -n "$previous_tag" ]; then
+              changelog=$(git log ${previous_tag}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+            else
+              changelog=$(git log --pretty=format:"- %s (%h)" --no-merges -n 20)
+            fi
+          else
+            changelog="manual release build"
+          fi
+
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$changelog" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: create release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: shotgun ${{ steps.version.outputs.version }}
+          body: |
+            ## changes
+
+            ${{ steps.changelog.outputs.changelog }}
+
+            ## downloads
+
+            - **windows**: shotgun-windows-amd64.exe
+            - **linux**: shotgun-linux-amd64
+            - **macos**: shotgun-macos-universal.zip (unsigned - may show security warning)
+
+            ## installation
+
+            ### windows
+            download and run shotgun-windows-amd64.exe
+
+            ### linux
+            ```bash
+            chmod +x shotgun-linux-amd64
+            ./shotgun-linux-amd64
+            ```
+
+            ### macos
+            ```bash
+            unzip shotgun-macos-universal.zip
+            open shotgun.app
+            ```
+
+            note: macos builds are unsigned. you may need to right-click → open to bypass gatekeeper.
+          files: |
+            release-assets/*
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.version, 'alpha') || contains(steps.version.outputs.version, 'beta') || contains(steps.version.outputs.version, 'rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
