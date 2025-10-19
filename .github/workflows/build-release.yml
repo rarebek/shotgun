@@ -69,7 +69,7 @@ jobs:
         run: pnpm install
 
       - name: build application
-        run: wails build -clean -platform ${{ matrix.platform }}/${{ matrix.arch }}
+        run: wails build -clean -platform ${{ matrix.platform }}/${{ matrix.arch }} -tags webkit2_41
 
       - name: prepare artifacts (linux)
         if: matrix.platform == 'linux'
