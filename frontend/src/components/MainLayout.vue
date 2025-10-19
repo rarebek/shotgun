@@ -3,6 +3,7 @@
         class="flex flex-col h-screen bg-background text-foreground"
     >
         <div
+            v-if="shouldShowTopBar"
             class="flex items-center justify-center bg-sidebar dark:bg-card text-foreground px-4 py-4"
         >
             <div
@@ -23,6 +24,7 @@
         <!-- group/layout: enables tailwind group variants for responsive child styling -->
         <div class="flex flex-1 overflow-hidden group/layout">
             <LeftSidebar
+                v-if="shouldShowSidebar"
                 :current-step="currentStep"
                 :steps="steps"
                 :project-root="projectRoot"
@@ -46,6 +48,7 @@
                 @refresh-project="handleRefreshProject"
             />
             <CentralPanel
+                :class="{ 'w-full': !shouldShowSidebar }"
                 :current-step="currentStep"
                 :shotgun-prompt-context="shotgunPromptContext"
                 :generation-progress="generationProgressData"
@@ -105,6 +108,7 @@ import {
     GetCustomPromptRules,
     CountGeminiTokens,
     CalculatePromptCost,
+    AddRecentProject,
 } from "../../wailsjs/go/main/App";
 import { EventsOn, Environment } from "../../wailsjs/runtime/runtime";
 
@@ -264,6 +268,15 @@ const splitLineLimitValue = ref(0); // add new state variable
 const isNavigating = ref(false); // track navigation state to prevent context generation during transitions
 let debounceTimer = null;
 
+// computed properties for conditional UI rendering
+const shouldShowTopBar = computed(() => {
+    return !(!projectRoot.value && currentStep.value === 1 && !isGeneratingContext.value)
+})
+
+const shouldShowSidebar = computed(() => {
+    return !(!projectRoot.value && currentStep.value === 1 && !isGeneratingContext.value)
+})
+
 // background token counting state (persists across step navigation)
 const geminiTokenCount = ref(0);
 const isCountingTokens = ref(false);
@@ -373,6 +386,14 @@ async function selectProjectFolder(selectedDir) {
             loadingError.value = "";
             manuallyToggledNodes.clear();
             fileTree.value = [];
+
+            // add to recent projects list
+            try {
+                await AddRecentProject(selectedDir);
+                addLog(`added to recent projects: ${selectedDir}`, "debug", "bottom");
+            } catch (err) {
+                addLog(`failed to add to recent projects: ${err}`, "warn", "bottom");
+            }
 
             await loadFileTree(selectedDir);
 
@@ -1482,6 +1503,14 @@ async function openFolderProgrammatically(folderPath) {
         loadingError.value = "";
         manuallyToggledNodes.clear();
         fileTree.value = [];
+
+        // add to recent projects list
+        try {
+            await AddRecentProject(folderPath);
+            addLog(`added to recent projects: ${folderPath}`, "debug", "bottom");
+        } catch (err) {
+            addLog(`failed to add to recent projects: ${err}`, "warn", "bottom");
+        }
 
         await loadFileTree(folderPath);
 

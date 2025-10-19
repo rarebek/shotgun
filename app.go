@@ -27,38 +27,38 @@ import (
 	"google.golang.org/api/option"
 )
 
-const maxOutputSizeBytes = 50_000_000  // 50mb
+const maxOutputSizeBytes = 50_000_000    // 50mb
 const maxFileReadSizeBytes = 500_000_000 // 500mb
 var ErrContextTooLong = errors.New("context is too long")
 
 // concurrency configuration for large-scale codebase processing
 const (
-	maxFileWorkers     = 64  // maximum concurrent file readers
-	maxDirWorkers      = 32  // maximum concurrent directory scanners
-	workQueueSize      = 256 // buffered channel size for work distribution
+	maxFileWorkers = 64  // maximum concurrent file readers
+	maxDirWorkers  = 32  // maximum concurrent directory scanners
+	workQueueSize  = 256 // buffered channel size for work distribution
 )
 
 // directories that should never appear in the generated context tree
 var alwaysExcludedDirs = map[string]bool{
-	".git": true,
-	"node_modules": true,
-	".svn": true,
-	".hg": true,
-	".bzr": true,
-	"vendor": true,
-	".idea": true,
-	".vscode": true,
-	"__pycache__": true,
+	".git":          true,
+	"node_modules":  true,
+	".svn":          true,
+	".hg":           true,
+	".bzr":          true,
+	"vendor":        true,
+	".idea":         true,
+	".vscode":       true,
+	"__pycache__":   true,
 	".pytest_cache": true,
-	".mypy_cache": true,
-	"target": true,  // rust/java
-	"dist": true,
-	"build": true,
-	".next": true,
-	".nuxt": true,
-	".cache": true,
-	"coverage": true,
-	".nyc_output": true,
+	".mypy_cache":   true,
+	"target":        true, // rust/java
+	"dist":          true,
+	"build":         true,
+	".next":         true,
+	".nuxt":         true,
+	".cache":        true,
+	"coverage":      true,
+	".nyc_output":   true,
 }
 
 //go:embed ignore.glob
@@ -70,9 +70,10 @@ var promptNone string
 const defaultCustomPromptRulesContent = "no additional rules"
 
 type AppSettings struct {
-	CustomIgnoreRules string `json:"customIgnoreRules"`
-	CustomPromptRules string `json:"customPromptRules"`
-	GeminiAPIKey      string `json:"geminiApiKey"`
+	CustomIgnoreRules string   `json:"customIgnoreRules"`
+	CustomPromptRules string   `json:"customPromptRules"`
+	GeminiAPIKey      string   `json:"geminiApiKey"`
+	RecentProjects    []string `json:"recentProjects"`
 }
 
 type App struct {
@@ -465,15 +466,19 @@ func buildTreeRecursiveParallel(ctx context.Context, currentPath, rootPath strin
 
 // fileReadResult holds the result of reading a single file for context generation
 type fileReadResult struct {
-	index          int
-	relPath        string
-	content        string
-	isOversized    bool
-	err            error
+	index       int
+	relPath     string
+	content     string
+	isOversized bool
+	err         error
 }
 
 // readFilesParallel reads multiple files in parallel using a worker pool
-func readFilesParallel(ctx context.Context, fileInfos []struct{index int; path string; relPath string}, rootDir string) ([]fileReadResult, error) {
+func readFilesParallel(ctx context.Context, fileInfos []struct {
+	index   int
+	path    string
+	relPath string
+}, rootDir string) ([]fileReadResult, error) {
 	if len(fileInfos) == 0 {
 		return []fileReadResult{}, nil
 	}
@@ -943,7 +948,6 @@ func (a *App) generateShotgunOutputWithProgress(jobCtx context.Context, rootDir 
 	return output.String() + "\n" + strings.TrimRight(fileContents.String(), "\n"), nil
 }
 
-
 // --- watchman implementation ---
 
 type Watchman struct {
@@ -1314,6 +1318,7 @@ func (a *App) compileCustomIgnorePatterns() error {
 func (a *App) loadSettings() {
 	// default to embedded rules
 	a.settings.CustomIgnoreRules = defaultCustomIgnoreRulesContent
+	a.settings.RecentProjects = []string{} // initialize empty recent projects list
 
 	if a.configPath == "" {
 		runtime.LogWarningf(a.ctx, "config path is empty, using default custom ignore rules (embedded).")
@@ -1363,6 +1368,9 @@ func (a *App) loadSettings() {
 			} else {
 				a.settings.CustomPromptRules = defaultCustomPromptRulesContent
 			}
+
+			// load recent projects
+			a.settings.RecentProjects = loadedSettings.RecentProjects
 		}
 	}
 
@@ -1383,6 +1391,7 @@ func (a *App) saveSettings() error {
 		CustomPromptRules: a.settings.CustomPromptRules,
 		GeminiAPIKey:      a.settings.GeminiAPIKey,
 		CustomIgnoreRules: a.settings.CustomIgnoreRules, // default to full rules
+		RecentProjects:    a.settings.RecentProjects,
 	}
 
 	// extract only user rules for saving (everything after "#--- user rules ---")
@@ -1592,9 +1601,9 @@ func (a *App) CountGeminiTokens(text string) (int, error) {
 
 // pricingrate holds the pricing information for a gemini model
 type PricingRate struct {
-	Model              string  `json:"model"`
-	InputPricePer1M    float64 `json:"inputPricePer1M"`    // price per 1 million input tokens
-	OutputPricePer1M   float64 `json:"outputPricePer1M"`   // price per 1 million output tokens
+	Model            string  `json:"model"`
+	InputPricePer1M  float64 `json:"inputPricePer1M"`  // price per 1 million input tokens
+	OutputPricePer1M float64 `json:"outputPricePer1M"` // price per 1 million output tokens
 }
 
 // getmodelpricing returns the pricing rates for a given model
@@ -1604,8 +1613,8 @@ func (a *App) getModelPricing(modelName string) PricingRate {
 	pricingMap := map[string]PricingRate{
 		"gemini-2.5-pro": {
 			Model:            "gemini-2.5-pro",
-			InputPricePer1M:  1.25,    // $1.25 per 1M input tokens (≤200k token prompts)
-			OutputPricePer1M: 10.00,   // $10.00 per 1M output tokens (≤200k token prompts)
+			InputPricePer1M:  1.25,  // $1.25 per 1M input tokens (≤200k token prompts)
+			OutputPricePer1M: 10.00, // $10.00 per 1M output tokens (≤200k token prompts)
 		},
 	}
 
@@ -1733,7 +1742,6 @@ func (a *App) StopGeminiRequest() error {
 	return errors.New("no active gemini request to cancel")
 }
 
-
 // istextcontent heuristically determines whether the provided byte slice represents textual data.
 // it checks for the presence of null bytes, utf-8 validity, and a ratio of non-printable control
 // characters. this helps us avoid inlining binary data (e.g. images, audio) into the generated
@@ -1800,4 +1808,69 @@ func (a *App) ResetApplication() error {
 	// clear defaultRootDir so frontend reload does not auto-reopen the previous folder
 	a.defaultRootDir = ""
 	return nil
+}
+
+// --- recent projects management ---
+
+// getrecentprojects returns the list of recent project paths
+func (a *App) GetRecentProjects() []string {
+	return a.settings.RecentProjects
+}
+
+// addrecentproject adds a project to the recent projects list
+// maintains lifo ordering with most recent first, limits to 4 projects, and handles duplicates
+func (a *App) AddRecentProject(path string) error {
+	if path == "" {
+		return errors.New("cannot add empty path to recent projects")
+	}
+
+	// clean the path
+	cleanPath := filepath.Clean(path)
+
+	// remove existing entry if it exists (to move it to the top)
+	var filtered []string
+	for _, p := range a.settings.RecentProjects {
+		if p != cleanPath {
+			filtered = append(filtered, p)
+		}
+	}
+
+	// add the new path at the beginning
+	a.settings.RecentProjects = append([]string{cleanPath}, filtered...)
+
+	// limit to 4 projects
+	if len(a.settings.RecentProjects) > 4 {
+		a.settings.RecentProjects = a.settings.RecentProjects[:4]
+	}
+
+	runtime.LogInfof(a.ctx, "added project to recent list: %s", cleanPath)
+	return a.saveSettings()
+}
+
+// removerecentproject removes a project from the recent projects list
+func (a *App) RemoveRecentProject(path string) error {
+	if path == "" {
+		return errors.New("cannot remove empty path from recent projects")
+	}
+
+	cleanPath := filepath.Clean(path)
+
+	// find and remove the project
+	var filtered []string
+	found := false
+	for _, p := range a.settings.RecentProjects {
+		if p != cleanPath {
+			filtered = append(filtered, p)
+		} else {
+			found = true
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("project not found in recent projects: %s", cleanPath)
+	}
+
+	a.settings.RecentProjects = filtered
+	runtime.LogInfof(a.ctx, "removed project from recent list: %s", cleanPath)
+	return a.saveSettings()
 }

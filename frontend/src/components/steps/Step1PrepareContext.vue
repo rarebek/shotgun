@@ -39,42 +39,13 @@
             </p>
         </div>
 
-        <!-- drag-and-drop area for initial folder selection -->
-        <div
+        <!-- project launcher for initial folder selection -->
+        <ProjectLauncher
             v-if="!projectRoot && !isLoadingContext"
-            class="flex-grow flex flex-col justify-center items-center border-4 border-dashed rounded-[0.4rem] p-10 cursor-pointer drag-area bg-white dark:bg-[#3a3b60]"
-            :class="{
-                'border-light-accent dark:border-dark-accent bg-light-accent/50 dark:bg-[#3a3b60] animate-pulse-bg dragging':
-                    isDragging,
-                'border-accent': !isDragging,
-            }"
-            @click="handleSelectDirectory"
-        >
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-16 w-16 mb-4 text-sidebar-foreground"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-            >
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="1.5"
-                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-                />
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="1.5"
-                    d="M9 13h6m-3-3v6"
-                />
-            </svg>
-            <p class="text-2xl font-medium text-sidebar-foreground mb-2">
-                drag folder here
-            </p>
-            <p class="text-md text-sidebar-foreground">or click to browse</p>
-        </div>
+            @open-dialog="handleSelectDirectory"
+            @open-project="(path) => emit('action', 'selectDirectory', path)"
+            @project-removed="() => {}"
+        />
 
         <!-- loading state: always progress bar -->
         <div
@@ -210,6 +181,7 @@ import { ClipboardSetText as WailsClipboardSetText } from "../../../wailsjs/runt
 import { SelectDirectory } from "../../../wailsjs/go/main/App";
 import { OnFileDrop, EventsOn } from "../../../wailsjs/runtime/runtime";
 import BaseButton from "../BaseButton.vue";
+import ProjectLauncher from "../launcher/ProjectLauncher.vue";
 
 const props = defineProps({
     generatedContext: {

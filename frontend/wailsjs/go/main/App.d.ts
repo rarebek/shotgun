@@ -3,6 +3,8 @@
 import {main} from '../models';
 import {context} from '../models';
 
+export function AddRecentProject(arg1:string):Promise<void>;
+
 export function CalculatePromptCost(arg1:number,arg2:string,arg3:number):Promise<number>;
 
 export function CountGeminiTokens(arg1:string):Promise<number>;
@@ -15,7 +17,11 @@ export function GetCustomPromptRules():Promise<string>;
 
 export function GetGeminiAPIKey():Promise<string>;
 
+export function GetRecentProjects():Promise<Array<string>>;
+
 export function ListFiles(arg1:string):Promise<Array<main.FileNode>>;
+
+export function RemoveRecentProject(arg1:string):Promise<void>;
 
 export function RequestShotgunContextGeneration(arg1:string,arg2:Array<string>):Promise<void>;
 
